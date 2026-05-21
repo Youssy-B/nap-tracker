@@ -1,0 +1,1857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nap Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0d0f14;
+  --surface:  #161920;
+  --card:     #1e2129;
+  --card2:    #252830;
+  --border:   #2c303c;
+  --accent:   #7eb8f7;
+  --accent-d: #4a8fd4;
+  --text:     #eaecf2;
+  --muted:    #6b7080;
+  --subtle:   #3a3f50;
+  --amber:    #f0b96b;
+  --teal:     #5ecfb0;
+  --purple:   #b09fec;
+  --red:      #e88080;
+  --green:    #5ecfb0;
+
+  --contact-bg:  #1e1a2e;
+  --contact-col: #b09fec;
+  --cot-bg:      #122a22;
+  --cot-col:     #5ecfb0;
+  --pram-bg:     #2a1e0a;
+  --pram-col:    #f0b96b;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+/* ── LAYOUT ── */
+.app-header {
+  padding: 16px 16px 8px;
+  flex-shrink: 0;
+  background: var(--bg);
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+
+.app-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.app-date {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.tabs {
+  display: flex;
+  gap: 3px;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 3px;
+}
+
+.tab {
+  flex: 1;
+  padding: 8px 4px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tab.active {
+  background: var(--card2);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.tab-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 16px 100px;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-80px);
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  z-index: 1000;
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+.safety-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-120px);
+  background: #1a2a1a;
+  border: 1px solid var(--teal);
+  border-radius: 16px;
+  padding: 12px 18px;
+  font-size: 13px;
+  color: var(--teal);
+  z-index: 999;
+  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  max-width: 320px;
+  text-align: center;
+  line-height: 1.5;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.safety-toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── FAB ── */
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 16px;
+  background: var(--accent);
+  color: #0d0f14;
+  border: none;
+  border-radius: 28px;
+  padding: 13px 20px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 24px rgba(126,184,247,0.25);
+  z-index: 100;
+  transition: transform 0.15s, opacity 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fab:active { transform: scale(0.94); }
+
+/* ── CARDS ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.card-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+/* ── STATUS CARD ── */
+.status-card {
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.status-card.idle {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.status-card.napping-contact {
+  background: var(--contact-bg);
+  border: 1px solid var(--contact-col);
+}
+
+.status-card.napping-cot {
+  background: var(--cot-bg);
+  border: 1px solid var(--cot-col);
+}
+
+.status-card.napping-pram {
+  background: var(--pram-bg);
+  border: 1px solid var(--pram-col);
+}
+
+.status-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.status-main {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -1px;
+  margin-bottom: 4px;
+}
+
+.status-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 5px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50% { opacity:0.5; transform:scale(0.8); }
+}
+
+/* ── ONE-TAP BUTTONS ── */
+.nap-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.nap-btn {
+  border: none;
+  border-radius: 14px;
+  padding: 14px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.12s, opacity 0.12s;
+}
+.nap-btn:active { transform: scale(0.95); opacity: 0.8; }
+
+.nap-btn-contact { background: var(--contact-bg); border: 1px solid var(--contact-col); }
+.nap-btn-cot     { background: var(--cot-bg);     border: 1px solid var(--cot-col); }
+
+.nap-btn-icon  { font-size: 20px; margin-bottom: 6px; display: block; }
+.nap-btn-title { font-size: 14px; font-weight: 700; display: block; }
+.nap-btn-sub   { font-size: 11px; margin-top: 2px; display: block; opacity: 0.8; }
+
+.contact-col { color: var(--contact-col); }
+.cot-col     { color: var(--cot-col); }
+
+.end-btn {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s;
+}
+.end-btn:active { background: var(--card2); }
+
+/* ── SUGGESTION CARD ── */
+.suggestion {
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.suggestion-contact { background: #1a1a2e; border: 1px solid #3a3260; }
+.suggestion-free    { background: #122a1e; border: 1px solid #2a5040; }
+.suggestion-idle    { background: var(--surface); border: 1px solid var(--border); }
+
+.suggestion-text { flex: 1; }
+.suggestion-label { font-size: 16px; font-weight: 700; margin-bottom: 3px; }
+.suggestion-detail { font-size: 12px; color: var(--muted); }
+.suggestion-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.badge-study  { background: #1a2a3a; color: var(--accent); }
+.badge-chore  { background: #1a2a1a; color: var(--teal); }
+.badge-rest   { background: #1a1a2a; color: var(--purple); }
+.badge-short  { background: var(--card2); color: var(--muted); }
+
+/* ── CHORE CARD ── */
+.chore-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chore-done { opacity: 0.5; }
+.chore-done .chore-name { text-decoration: line-through; }
+
+.chore-left { flex: 1; }
+.chore-eyebrow { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 3px; }
+.chore-name { font-size: 15px; font-weight: 600; }
+.chore-hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.chore-tick {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.chore-tick.done { background: var(--teal); border-color: var(--teal); }
+.chore-tick:active { transform: scale(0.9); }
+
+/* ── SLEEP STRIP ── */
+.sleep-strip {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.sleep-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 8px;
+  text-align: center;
+}
+.sleep-num { font-size: 18px; font-weight: 800; line-height: 1; margin-bottom: 3px; }
+.sleep-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* ── WAKE COUNTER ── */
+.wake-card {
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.wake-ok    { background: var(--surface); border: 1px solid var(--border); }
+.wake-amber { background: #2a1e06; border: 1px solid var(--amber); }
+.wake-red   { background: #2a1010; border: 1px solid var(--red); }
+
+.wake-left { flex: 1; }
+.wake-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 2px; }
+.wake-ok .wake-eyebrow    { color: var(--muted); }
+.wake-amber .wake-eyebrow { color: var(--amber); }
+.wake-red .wake-eyebrow   { color: var(--red); }
+.wake-time { font-size: 26px; font-weight: 800; line-height: 1; }
+.wake-ok .wake-time    { color: var(--text); }
+.wake-amber .wake-time { color: var(--amber); }
+.wake-red .wake-time   { color: var(--red); }
+.wake-hint { font-size: 12px; margin-top: 3px; }
+.wake-ok .wake-hint    { color: var(--muted); }
+.wake-amber .wake-hint { color: var(--amber); }
+.wake-red .wake-hint   { color: var(--red); }
+.wake-avg  { font-size: 11px; color: var(--muted); text-align: right; line-height: 1.6; }
+
+/* ── PROGRESS BAR ── */
+.progress-bar {
+  background: var(--border);
+  border-radius: 4px;
+  height: 4px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+/* ── TIMELINE (Today nap list) ── */
+.nap-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.nap-item:last-child { border-bottom: none; }
+
+.nap-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.dot-contact { background: var(--contact-col); }
+.dot-cot     { background: var(--cot-col); }
+.dot-pram    { background: var(--pram-col); }
+
+.nap-time { font-size: 14px; font-weight: 600; flex: 1; }
+.nap-dur  { font-size: 13px; color: var(--accent); }
+.nap-type { font-size: 11px; color: var(--muted); }
+.icon-btn { background: none; border: none; cursor: pointer; padding: 4px 6px; font-size: 15px; line-height: 1; }
+
+/* ── FORM ── */
+.form-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 200;
+  display: none;
+  align-items: flex-end;
+}
+.form-overlay.open { display: flex; }
+
+.form-sheet {
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  padding: 20px 16px 40px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+}
+
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+.sheet-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.field-input {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  padding: 10px 12px;
+  width: 100%;
+  outline: none;
+  margin-bottom: 14px;
+}
+.field-input:focus { border-color: var(--accent); }
+
+.type-pills { display: flex; gap: 6px; margin-bottom: 14px; }
+.type-pill {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.type-pill.sel-contact { background: var(--contact-bg); color: var(--contact-col); border-color: var(--contact-col); }
+.type-pill.sel-cot     { background: var(--cot-bg);     color: var(--cot-col);     border-color: var(--cot-col); }
+.type-pill.sel-pram    { background: var(--pram-bg);    color: var(--pram-col);    border-color: var(--pram-col); }
+
+.btn-primary {
+  background: var(--accent);
+  color: #0d0f14;
+  border: none;
+  border-radius: 12px;
+  padding: 13px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 8px;
+}
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 11px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+  width: 100%;
+}
+
+/* ── PATTERNS ── */
+.pattern-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 10px; }
+.pattern-title { font-size: 15px; font-weight: 700; color: var(--accent); margin-bottom: 10px; }
+.pattern-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.pattern-row:last-child { border-bottom: none; }
+.p-key { color: var(--muted); }
+.p-val { font-weight: 600; }
+
+.section-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 10px 0;
+  margin-bottom: 6px;
+}
+.section-toggle-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.section-toggle-chevron { font-size: 12px; color: var(--accent); }
+
+/* ── HISTORY ── */
+.history-day { background: var(--card); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 8px; overflow: hidden; }
+.history-day-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; cursor: pointer; }
+.history-day-title { font-weight: 700; font-size: 14px; color: var(--accent); }
+.history-day-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.history-day-chevron { font-size: 12px; color: var(--accent); }
+.history-day-body { padding: 0 14px 12px; display: none; }
+.history-day-body.open { display: block; }
+
+.day-bar { height: 7px; background: var(--border); border-radius: 4px; position: relative; overflow: hidden; margin: 8px 0; }
+.bar-seg { position: absolute; height: 100%; border-radius: 2px; opacity: 0.85; }
+
+.history-nap { font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; }
+.history-nap:last-child { border-bottom: none; }
+
+/* ── SETTINGS ── */
+.settings-group { background: var(--card); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 10px; overflow: hidden; }
+.settings-group-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+.settings-group-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.settings-group-body { display: none; border-top: 1px solid var(--border); }
+.settings-group-body.open { display: block; }
+
+.settings-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.settings-row:last-child { border-bottom: none; }
+.settings-row-label { font-size: 15px; }
+.settings-row-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.settings-row-val { font-size: 14px; color: var(--accent); }
+
+.toggle-switch {
+  width: 42px;
+  height: 24px;
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.toggle-switch.on  { background: var(--accent); }
+.toggle-switch.off { background: var(--subtle); }
+.toggle-knob {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  top: 3px;
+  transition: left 0.2s;
+}
+.toggle-switch.on  .toggle-knob { left: 21px; }
+.toggle-switch.off .toggle-knob { left: 3px; }
+
+.select-input {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  padding: 8px 12px;
+  outline: none;
+  appearance: none;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.schedule-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.schedule-row:last-child { border-bottom: none; }
+.schedule-day  { font-size: 13px; font-weight: 600; color: var(--muted); min-width: 90px; }
+.schedule-task { font-size: 14px; text-align: right; flex: 1; }
+.schedule-override { color: var(--accent); }
+.schedule-anchor   { color: var(--amber); }
+.schedule-rest     { color: var(--muted); font-style: italic; }
+
+.task-row { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.task-row:last-child { border-bottom: none; }
+.task-rank { font-size: 12px; color: var(--muted); min-width: 20px; text-align: center; }
+.task-label { font-size: 14px; flex: 1; }
+.task-mins  { font-size: 11px; color: var(--muted); }
+
+.add-task-form { padding: 12px 14px; background: var(--card2); display: none; }
+.add-task-form.open { display: block; }
+
+.chore-field { padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.chore-field:last-child { border-bottom: none; }
+.chore-field-label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+.chore-field-input {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  padding: 8px 10px;
+  width: 100%;
+  outline: none;
+}
+.chore-field-input:focus { border-color: var(--accent); }
+
+.export-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  padding: 10px;
+  width: 100%;
+  min-height: 70px;
+  outline: none;
+  resize: none;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.weekly-card {
+  background: linear-gradient(135deg, #1a2030, #161920);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.weekly-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.weekly-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.weekly-stat { text-align: center; }
+.weekly-num { font-size: 20px; font-weight: 800; color: var(--text); line-height: 1; }
+.weekly-lbl { font-size: 10px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.empty { text-align: center; color: var(--muted); font-size: 14px; padding: 32px 0; line-height: 2; }
+
+.version-note { text-align: center; font-size: 12px; color: var(--subtle); padding: 12px 0; }
+
+.inline-btn {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.inline-btn-blue { color: var(--accent); }
+.inline-btn-red  { color: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="header-row">
+    <div class="app-title">Nap Tracker</div>
+    <div class="app-date" id="app-date"></div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('today',this)">Today</div>
+    <div class="tab" onclick="switchTab('patterns',this)">Patterns</div>
+    <div class="tab" onclick="switchTab('history',this)">History</div>
+    <div class="tab" onclick="switchTab('settings',this)">Settings</div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-content"></div>
+
+<button class="fab" id="fab" onclick="openForm()">＋ Log nap</button>
+
+<!-- Form sheet -->
+<div class="form-overlay" id="form-overlay" onclick="handleOverlayClick(event)">
+  <div class="form-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="form-title">Log nap</div>
+    <label class="field-label">Date</label>
+    <input class="field-input" type="date" id="f-date">
+    <label class="field-label">Start time</label>
+    <input class="field-input" type="time" id="f-start">
+    <label class="field-label">End time</label>
+    <input class="field-input" type="time" id="f-end">
+    <label class="field-label">Type</label>
+    <div class="type-pills">
+      <div class="type-pill sel-contact" onclick="selType('contact')">📱 Contact</div>
+      <div class="type-pill" onclick="selType('cot')">🛌 Cot / Pram</div>
+      <div class="type-pill" onclick="selType('pram')" style="display:none"></div>
+    </div>
+    <button class="btn-primary" id="form-save-btn" onclick="saveForm()">Save nap</button>
+    <button class="btn-secondary" onclick="closeForm()">Cancel</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="safety-toast" id="safety-toast"></div>
+
+<script>
+// ══ DEFAULT STATE ══════════════════════════════════════════════
+const ROTATING_CHORES = [
+  '🧺 Laundry on',
+  '🧹 Hoover & sweep',
+  '🚿 Bathrooms',
+  '👕 Laundry fold & put away'
+];
+
+const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+// ── Encouraging night messages ──────────────────────────────
+function getNightMessages(name, pronoun) {
+  // pronoun: 'she' | 'he' | null (uses name/baby)
+  const ref = name || 'Baby';
+  const pro = pronoun;
+  return [
+    `${ref}'s down. You did that. 🌙`,
+    `${ref}'s asleep. You're officially off duty. Rest well.`,
+    `Another day done. You showed up for ${ref} today. ✨`,
+    `Lights out. Go be a person for a bit. 💙`,
+    `${pro ? pro.charAt(0).toUpperCase()+pro.slice(1) : ref}'s sleeping. So should you — eventually. 🌛`,
+    `Day complete. You carried ${pro?'her':ref}, fed ${pro?'her':ref}, loved ${pro?'her':ref}. That counts.`,
+    `The hardest job in the world, and you did it again today.`,
+    `Night mode activated. Time is yours now. 🌟`,
+    `${ref}: sleeping. You: a hero who could really use a snack.`,
+    `${pro ? pro.charAt(0).toUpperCase()+pro.slice(1) : ref}'s out. Whatever you need right now — go get it.`,
+    `One more day ticked. You're doing better than you think. 💛`,
+    `Sleep tight, little one. You too. 🌙`,
+    `The night shift starts now. But first — breathe.`,
+    `Day survived. ${ref} thriving. You're the reason. ✨`,
+  ];
+}
+
+function getTonightMessage() {
+  const profile = state.babyProfile || {};
+  const name = profile.name || null;
+  const gender = profile.gender || null; // 'girl' | 'boy' | null
+  const pronoun = gender === 'girl' ? 'she' : gender === 'boy' ? 'he' : null;
+  const messages = getNightMessages(name, pronoun);
+  const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(),0,0))/86400000);
+  return messages[dayOfYear % messages.length];
+}
+
+function defaultState() {
+  return {
+    schemaVersion: '2.1.0',
+    days: {},
+    wakeTime: null, wakeDate: null,
+    bedTime: null,  bedDate: null,
+    choreDone: false, choreDoneDate: null,
+    babyProfile: { name: null, gender: null },
+    choreConfig: {
+      binDay: null, shoppingDay: null, restDay: null, overrides: {}
+    },
+    safetyCheck: {
+      cotEnabled: true,
+      pramEnabled: true,
+      intervalMins: 30,      // how often to show the check-in
+      cotMessage: '👂 Quick check — baby has been in the cot for {mins} mins. Just a gentle nudge to listen out.',
+      pramMessage: '🛌 Baby in pram — stay nearby. {mins} mins into this nap.',
+    },
+    contactTasks: {
+      categories: [
+        { id:'study',  icon:'📚', label:'Study / Learning', active:true,
+          tasks:[{id:'t1',label:'Online course',minMins:20,priority:1},{id:'t2',label:'Reading',minMins:5,priority:2},{id:'t3',label:'Research / notes',minMins:10,priority:3}] },
+        { id:'career', icon:'💼', label:'Work / Career', active:true,
+          tasks:[{id:'t4',label:'Job applications',minMins:15,priority:1},{id:'t5',label:'Update CV',minMins:20,priority:2},{id:'t6',label:'LinkedIn',minMins:10,priority:3}] },
+        { id:'admin',  icon:'📱', label:'Admin', active:true,
+          tasks:[{id:'t7',label:'Reply to messages',minMins:5,priority:1},{id:'t8',label:'Pay bills',minMins:10,priority:2},{id:'t9',label:'Book appointments',minMins:5,priority:3}] },
+        { id:'rest',   icon:'🧘', label:'Rest', active:true,
+          tasks:[{id:'t10',label:'Rest / nap',minMins:5,priority:1},{id:'t11',label:'Podcast',minMins:10,priority:2},{id:'t12',label:'Mindfulness',minMins:5,priority:3}] },
+        { id:'personal',icon:'🎯',label:'Personal', active:false,
+          tasks:[{id:'t13',label:'Journal',minMins:10,priority:1},{id:'t14',label:'Plan the week',minMins:15,priority:2},{id:'t15',label:'Creative project',minMins:20,priority:3}] },
+      ]
+    }
+  };
+}
+
+// ══ STATE ══════════════════════════════════════════════════════
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem('naptracker'));
+    if (!s) return defaultState();
+    if (s.days && !s.schemaVersion) return migrateLegacy(s);
+    // Merge missing keys from default
+    const d = defaultState();
+    if (!s.contactTasks) s.contactTasks = d.contactTasks;
+    if (!s.choreConfig)  s.choreConfig  = d.choreConfig;
+    if (!s.choreConfig.overrides) s.choreConfig.overrides = {};
+    if (s.choreDone === undefined) { s.choreDone = false; s.choreDoneDate = null; }
+    return s;
+  } catch(e) { return defaultState(); }
+}
+
+function migrateLegacy(old) {
+  localStorage.setItem('naptracker_legacy', JSON.stringify(old));
+  const s = defaultState();
+  s.days = old.days || {};
+  if (old.wakeTime) { s.wakeTime = old.wakeTime; s.wakeDate = old.wakeDate; }
+  if (old.choreConfig) s.choreConfig = { ...s.choreConfig, ...old.choreConfig };
+  if (old.contactTasks) s.contactTasks = old.contactTasks;
+  return s;
+}
+
+function saveState() { try { localStorage.setItem('naptracker', JSON.stringify(state)); } catch(e) {} }
+
+let state = loadState();
+
+// ── Daily reset ─────────────────────────────────────────────
+function getDayKeys() {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const yest = new Date(today); yest.setDate(today.getDate()-1);
+  const yesterdayStr = yest.toISOString().split('T')[0];
+  return { today: todayStr, yesterday: yesterdayStr };
+}
+
+function performDailyReset() {
+  const { today, yesterday } = getDayKeys();
+  let changed = false;
+
+  // Wake time — reset if not from today
+  if (state.wakeDate && state.wakeDate !== today) {
+    state.wakeTime = null; state.wakeDate = null; changed = true;
+  }
+  // Bed time — reset if older than yesterday
+  // (yesterday's bedtime is valid for tonight's overnight calc)
+  if (state.bedDate && state.bedDate !== yesterday && state.bedDate !== today) {
+    state.bedTime = null; state.bedDate = null; changed = true;
+  }
+  // Chore done — reset if not from today
+  if (state.choreDoneDate && state.choreDoneDate !== today) {
+    state.choreDone = false; state.choreDoneDate = null; changed = true;
+  }
+  // Safety check counter
+  if (typeof lastSafetyCheckMins !== 'undefined') lastSafetyCheckMins = 0;
+
+  if (changed) saveState();
+}
+
+performDailyReset();
+
+// Check for midnight rollover every minute
+let _lastCheckedDate = new Date().toISOString().split('T')[0];
+setInterval(() => {
+  const currentDate = new Date().toISOString().split('T')[0];
+  if (currentDate !== _lastCheckedDate) {
+    _lastCheckedDate = currentDate;
+    performDailyReset();
+    // If on Today tab, re-render to show fresh state
+    if (currentTab === 'today') render();
+  }
+}, 60000);
+
+// ══ UI STATE ═══════════════════════════════════════════════════
+let currentTab = 'today';
+let formEditingNap = null; // {dateKey, index}
+let formSelectedType = 'contact';
+let expandedDays = new Set();
+let patternsExpanded = false;
+let expandedSettings = new Set(['chores','contact-tasks']);
+let choreDayExpanded = false;
+
+// ══ HELPERS ════════════════════════════════════════════════════
+const todayKey = () => new Date().toISOString().split('T')[0];
+const getTodayNaps = () => (state.days[todayKey()]||[]).sort((a,b)=>a.start.localeCompare(b.start));
+
+function nowStr() {
+  const n = new Date();
+  return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+}
+
+function fmtTime(t) {
+  if (!t) return '—';
+  const [h,m] = t.split(':');
+  const hr = parseInt(h);
+  return `${hr>12?hr-12:hr||12}:${m}${hr>=12?'pm':'am'}`;
+}
+
+function durMins(s, e) {
+  if (!s||!e) return 0;
+  const [sh,sm]=s.split(':').map(Number);
+  const [eh,em]=e.split(':').map(Number);
+  return Math.max(0,(eh*60+em)-(sh*60+sm));
+}
+
+function fmtDur(m) {
+  if (!m||m<=0) return '—';
+  if (m<60) return `${m}m`;
+  return `${Math.floor(m/60)}h${m%60>0?' '+m%60+'m':''}`;
+}
+
+function typeColor(t) {
+  return {contact:'var(--contact-col)',cot:'var(--cot-col)',pram:'var(--pram-col)'}[t]||'var(--muted)';
+}
+
+function getAvgWakeWindow() {
+  const allNaps = Object.values(state.days).flat().filter(n=>n.start&&n.end);
+  if (allNaps.length<2) return 90;
+  return Math.round(allNaps.reduce((a,n)=>a+durMins(n.start,n.end),0)/allNaps.length);
+}
+
+function getWakeWindowMins() {
+  const naps = getTodayNaps();
+  const lastEnded = naps.filter(n=>n.end).sort((a,b)=>b.end.localeCompare(a.end))[0];
+  const wakeStart = lastEnded ? lastEnded.end : state.wakeTime;
+  if (!wakeStart) return null;
+  return durMins(wakeStart, nowStr());
+}
+
+function getNapTotal() { return getTodayNaps().reduce((a,n)=>a+durMins(n.start,n.end),0); }
+
+function getOvernight() {
+  // Overnight = yesterday's bedTime to today's wakeTime
+  // bedDate should be yesterday or earlier; wakeDate should be today
+  if (!state.bedTime || !state.wakeTime) return null;
+  const [bh,bm]=state.bedTime.split(':').map(Number);
+  const [wh,wm]=state.wakeTime.split(':').map(Number);
+  // If bed is today (just logged), don't calculate yet — not overnight yet
+  if (state.bedDate === todayKey() && state.wakeDate === todayKey()) return null;
+  return Math.max(0,(24*60-(bh*60+bm))+(wh*60+wm));
+}
+
+// ══ CHORE LOGIC ════════════════════════════════════════════════
+function getPrevDay(d) { return (d+6)%7; }
+
+function getChoreForDay(dayIndex) {
+  const cfg = state.choreConfig;
+  const { binDay, shoppingDay, restDay, overrides } = cfg;
+  if (overrides && overrides[dayIndex] !== undefined) return overrides[dayIndex];
+  if (restDay!==null && dayIndex===restDay) return null;
+  let tasks=[];
+  if (binDay!==null && dayIndex===binDay) tasks.push('🗑️ Put bins out for collection');
+  if (binDay!==null && dayIndex===getPrevDay(binDay)) tasks.push('🗑️ Empty household bins + clean fridge — collection tomorrow');
+  if (shoppingDay!==null && dayIndex===shoppingDay) tasks.push('🛒 Food shopping');
+  if (shoppingDay!==null && dayIndex===getPrevDay(shoppingDay)) tasks.push('📝 Check fridge, kitchen pantry + write shopping list — shopping tomorrow');
+  if (tasks.length>0) return tasks.join(' · ');
+  const anchors=new Set([binDay,shoppingDay,restDay,binDay!==null?getPrevDay(binDay):null,shoppingDay!==null?getPrevDay(shoppingDay):null].filter(d=>d!==null));
+  const rotDays=[1,2,3,4,5,6,0].filter(d=>!anchors.has(d));
+  const ri=rotDays.indexOf(dayIndex);
+  if (ri<ROTATING_CHORES.length) return ROTATING_CHORES[ri];
+  return '🧽 Free tidy / catch-up';
+}
+
+function getAutoChoreForDay(dayIndex) {
+  const cfg = state.choreConfig;
+  const { binDay, shoppingDay, restDay } = cfg;
+  if (restDay!==null && dayIndex===restDay) return null;
+  let tasks=[];
+  if (binDay!==null && dayIndex===binDay) tasks.push('🗑️ Put bins out for collection');
+  if (binDay!==null && dayIndex===getPrevDay(binDay)) tasks.push('🗑️ Empty household bins + clean fridge — collection tomorrow');
+  if (shoppingDay!==null && dayIndex===shoppingDay) tasks.push('🛒 Food shopping');
+  if (shoppingDay!==null && dayIndex===getPrevDay(shoppingDay)) tasks.push('📝 Check fridge, kitchen pantry + write shopping list — shopping tomorrow');
+  if (tasks.length>0) return tasks.join(' · ');
+  const anchors=new Set([binDay,shoppingDay,restDay,binDay!==null?getPrevDay(binDay):null,shoppingDay!==null?getPrevDay(shoppingDay):null].filter(d=>d!==null));
+  const rotDays=[1,2,3,4,5,6,0].filter(d=>!anchors.has(d));
+  const ri=rotDays.indexOf(dayIndex);
+  if (ri<ROTATING_CHORES.length) return ROTATING_CHORES[ri];
+  return '🧽 Free tidy / catch-up';
+}
+
+// ══ CONTACT SUGGESTION — multi-task time-sliced ══════════════
+function getContactSuggestion(napMins) {
+  const ct = state.contactTasks;
+  const active = ct.categories.filter(c=>c.active);
+  if (!active.length) return {
+    current: { label:'Phone task', detail:'Add tasks in Settings → Contact nap tasks', cls:'badge-short' },
+    completed: [], next: null
+  };
+
+  // Flatten all tasks from active categories, sort by minMins asc then priority asc
+  const allTasks = [];
+  active.forEach(cat => {
+    cat.tasks.forEach(t => allTasks.push({...t, catIcon:cat.icon, catLabel:cat.label}));
+  });
+  allTasks.sort((a,b) => (a.minMins||5)-(b.minMins||5) || a.priority-b.priority);
+
+  // Build a time-sliced schedule — work through tasks in order of min threshold
+  const completed = [];
+  let current = null;
+  let next = null;
+
+  for (let i=0; i<allTasks.length; i++) {
+    const t = allTasks[i];
+    const minM = t.minMins||5;
+    if (napMins >= minM) {
+      // Check if a later task's threshold has also been reached
+      const later = allTasks.slice(i+1).find(t2 => napMins>=(t2.minMins||5));
+      if (later) {
+        // This task has been superseded — mark as completed, move on
+        completed.push(t);
+      } else {
+        // This is the current task
+        current = t;
+        // Find next upcoming task
+        next = allTasks.find(t2 => napMins<(t2.minMins||5));
+        break;
+      }
+    }
+  }
+
+  if (!current) {
+    // Nothing fits yet — show what's coming
+    const upcoming = allTasks[0];
+    return {
+      current: { label:'Just starting', detail:`${upcoming?`${upcoming.catIcon} ${upcoming.label} unlocks at ${upcoming.minMins}m`:'Give it a few more minutes'}`, cls:'badge-short' },
+      completed: [], next: upcoming||null
+    };
+  }
+
+  const cls = (current.minMins||5)>=20?'badge-study':'badge-rest';
+  return {
+    current: { label:`${current.catIcon} ${current.label}`, detail:`${current.catLabel} · ${current.minMins}m+ reached`, cls },
+    completed,
+    next
+  };
+}
+
+// ══ TOAST ══════════════════════════════════════════════════════
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2500);
+}
+
+// ══ TAB SWITCHING ══════════════════════════════════════════════
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('fab').style.display = (tab==='today'||tab==='history') ? 'flex' : 'none';
+  render();
+}
+
+function render() {
+  if (currentTab==='today')    renderToday();
+  else if (currentTab==='patterns') renderPatterns();
+  else if (currentTab==='history')  renderHistory();
+  else renderSettings();
+}
+
+// ══ RENDER TODAY ═══════════════════════════════════════════════
+function renderToday() {
+  const naps = getTodayNaps();
+  const hasOngoing = naps.some(n=>n.start&&!n.end);
+  const ongoing = naps.find(n=>n.start&&!n.end);
+  const isWindDown = !!(state.bedTime && state.bedDate === todayKey());
+  const napTotal = getNapTotal();
+  const overnight = getOvernight();
+  const totalSleep = overnight ? napTotal+overnight : napTotal;
+  const chore = getChoreForDay(new Date().getDay());
+  const now = new Date();
+  const avgWW = getAvgWakeWindow();
+
+  // Date header
+  document.getElementById('app-date').textContent =
+    now.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+
+  let h = '';
+
+  // ── Status card ──
+  if (ongoing) {
+    const elapsed = durMins(ongoing.start, nowStr());
+    const napClass = `napping-${ongoing.type}`;
+    const col = typeColor(ongoing.type);
+    h += `<div class="status-card ${napClass}">
+      <div class="status-eyebrow" style="color:${col}">
+        <span class="live-dot" style="background:${col}"></span>
+        ${{contact:'📱 Contact',cot:'🛌 Cot / Pram',pram:'🛌 Cot / Pram'}[ongoing.type]||ongoing.type} nap in progress
+      </div>
+      <div class="status-main" style="color:${col}">${fmtDur(elapsed)}</div>
+      <div class="status-sub">Started ${fmtTime(ongoing.start)} · awake for ${fmtDur(durMins(ongoing.type==='contact'?state.wakeTime||'07:00':state.wakeTime||'07:00', ongoing.start))} before</div>
+      <button class="end-btn" onclick="endOngoingNap()" style="margin-top:4px">✓ End nap now</button>
+    </div>`;
+
+    // Suggestion
+    if (ongoing.type==='contact') {
+      const sug = getContactSuggestion(elapsed);
+      let compHtml = '';
+      if (sug.completed && sug.completed.length>0) {
+        compHtml = `<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
+          ✓ Already had time for: ${sug.completed.map(t=>`${t.catIcon} ${t.label}`).join(' · ')}
+        </div>`;
+      }
+      let nextHtml = '';
+      if (sug.next) {
+        nextHtml = `<div style="font-size:11px;color:var(--muted);margin-top:4px">
+          Next: ${sug.next.catIcon} ${sug.next.label} at ${sug.next.minMins}m
+        </div>`;
+      }
+      h += `<div class="suggestion suggestion-contact">
+        <div style="width:100%">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+            <div class="suggestion-text">
+              <div class="suggestion-label">${sug.current.label}</div>
+              <div class="suggestion-detail">${sug.current.detail}</div>
+            </div>
+            <div class="suggestion-badge ${sug.current.cls}" style="flex-shrink:0">📱 Now</div>
+          </div>
+          ${nextHtml}
+          ${compHtml}
+        </div>
+      </div>`;
+    } else {
+      let label, detail, cls;
+      if (elapsed>=60){label='🕊️ Study + chore';detail='Long enough for both';cls='badge-study';}
+      else if(elapsed>=45){label='🕊️ Study now';detail='Good window for a full lesson';cls='badge-study';}
+      else if(elapsed>=20){label=chore?`${chore}`:' Free time';detail=chore?"Good window for today's chore":'Rest or quick task';cls='badge-chore';}
+      else{label='🕊️ Just started';detail='Window building — check back soon';cls='badge-short';}
+      h += `<div class="suggestion suggestion-free">
+        <div class="suggestion-text">
+          <div class="suggestion-label">${label}</div>
+          <div class="suggestion-detail">${detail}</div>
+        </div>
+        <div class="suggestion-badge ${cls}">🛌 Free</div>
+      </div>`;
+    }
+  } else {
+    // Wake window counter
+    const ww = getWakeWindowMins();
+    if (ww!==null && ww>0) {
+      const pct = ww/avgWW;
+      const cls = pct>=0.9?'wake-red':pct>=0.7?'wake-amber':'wake-ok';
+      const hint = pct>=0.9?'⚠️ Nap likely very soon':pct>=0.7?'🔔 Nap window approaching':'Baby awake since last nap';
+      h += `<div class="wake-card ${cls}">
+        <div class="wake-left">
+          <div class="wake-eyebrow">Awake</div>
+          <div class="wake-time">${fmtDur(ww)}</div>
+          <div class="wake-hint">${hint}</div>
+        </div>
+        <div class="wake-avg">Avg<br>window<br><strong>${fmtDur(avgWW)}</strong></div>
+      </div>`;
+    }
+
+    // One-tap buttons — hide in night mode
+    if (!isWindDown) h += `<div class="nap-btns">
+      <button class="nap-btn nap-btn-contact" onclick="quickNap('contact')">
+        <span class="nap-btn-icon">📱</span>
+        <span class="nap-btn-title contact-col">Contact nap</span>
+        <span class="nap-btn-sub contact-col">Phone tasks only</span>
+      </button>
+      <button class="nap-btn nap-btn-cot" onclick="quickNap('cot')">
+        <span class="nap-btn-icon">🛌</span>
+        <span class="nap-btn-title cot-col">Cot / Pram</span>
+        <span class="nap-btn-sub cot-col">Fully free</span>
+      </button>
+    </div>`;
+  }
+
+  // ── Chore of the day ──
+  const choreDone = state.choreDone && state.choreDoneDate===todayKey();
+  h += `<div class="chore-card ${choreDone?'chore-done':''}">
+    <div class="chore-left">
+      <div class="chore-eyebrow">Today's chore</div>
+      <div class="chore-name">${chore||'😌 Rest day'}</div>
+      <div class="chore-hint">${chore?'Carrier · playpen · nap window':'No chore today — enjoy the rest'}</div>
+    </div>
+    <button class="chore-tick ${choreDone?'done':''}" onclick="toggleChoreDone()">
+      ${choreDone?'✓':''}
+    </button>
+  </div>`;
+
+  // ── Sleep strip ──
+  h += `<div class="sleep-strip">
+    <div class="sleep-stat">
+      <div class="sleep-num" style="color:var(--purple)">${fmtDur(napTotal)||'—'}</div>
+      <div class="sleep-lbl">Naps</div>
+    </div>
+    <div class="sleep-stat">
+      <div class="sleep-num" style="color:var(--accent)">${overnight?fmtDur(overnight):'—'}</div>
+      <div class="sleep-lbl">Night</div>
+    </div>
+    <div class="sleep-stat">
+      <div class="sleep-num" style="color:var(--teal)">${totalSleep>0?fmtDur(totalSleep):'—'}</div>
+      <div class="sleep-lbl">Total</div>
+    </div>
+  </div>`;
+
+  // ── Wake + bed time ──
+  h += `<div class="card">
+    <div class="card-label">Times</div>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1">
+        <div style="font-size:11px;color:var(--amber);font-weight:600;margin-bottom:4px">🌅 WOKE</div>
+        <input type="time" class="field-input" style="margin:0;color:${state.wakeTime?'var(--amber)':'var(--muted)'}"
+          ${state.wakeTime?`value="${state.wakeTime}"`:''}
+          onchange="setWake(this.value)">
+      </div>
+      <div style="flex:1">
+        <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:4px">🌙 BED</div>
+        <input type="time" class="field-input" style="margin:0;color:${state.bedTime?'var(--accent)':'var(--muted)'}"
+          ${state.bedTime?`value="${state.bedTime}"`:''}
+          onchange="setBed(this.value)">
+      </div>
+    </div>
+  </div>`;
+
+  // ── Today's naps ──
+  if (naps.length>0) {
+    h += `<div class="card">
+      <div class="card-label">Today's naps</div>`;
+    naps.forEach((n,i)=>{
+      const dur = durMins(n.start,n.end);
+      h += `<div class="nap-item">
+        <div class="nap-dot dot-${n.type}"></div>
+        <div class="nap-time">${fmtTime(n.start)} → ${n.end?fmtTime(n.end):'...'}</div>
+        ${dur>0?`<div class="nap-dur">${fmtDur(dur)}</div>`:''}
+        <div class="nap-type">${n.type}</div>
+        <button class="icon-btn" style="color:var(--accent)" onclick="editNap('${todayKey()}',${i})">✎</button>
+        <button class="icon-btn" style="color:var(--muted)" onclick="deleteNap('${todayKey()}',${i})">×</button>
+      </div>`;
+    });
+    h += `</div>`;
+  }
+
+  // ── Sunday weekly summary ──
+  if (new Date().getDay()===0) {
+    const allDays7 = Object.entries(state.days)
+      .filter(([d])=>{ const dd=new Date(d); const n=new Date(); n.setDate(n.getDate()-7); return dd>=n; });
+    if (allDays7.length>0) {
+      const allNaps7 = allDays7.flatMap(([,naps])=>naps).filter(n=>n.start&&n.end);
+      const totalMins7 = allNaps7.reduce((a,n)=>a+durMins(n.start,n.end),0);
+      const avgDur7 = allNaps7.length>0?Math.round(totalMins7/allNaps7.length):0;
+      const bestNap7 = allNaps7.reduce((b,n)=>durMins(n.start,n.end)>durMins(b.start,b.end)?n:b,allNaps7[0]);
+      h += `<div class="weekly-card">
+        <div class="weekly-title">🗓 This week</div>
+        <div class="weekly-stats">
+          <div class="weekly-stat"><div class="weekly-num">${allNaps7.length}</div><div class="weekly-lbl">Naps</div></div>
+          <div class="weekly-stat"><div class="weekly-num">${fmtDur(avgDur7)}</div><div class="weekly-lbl">Avg length</div></div>
+          <div class="weekly-stat"><div class="weekly-num">${bestNap7?fmtDur(durMins(bestNap7.start,bestNap7.end)):'—'}</div><div class="weekly-lbl">Longest</div></div>
+        </div>
+      </div>`;
+    }
+  }
+
+  document.getElementById('tab-content').innerHTML = h;
+}
+
+// ══ RENDER PATTERNS ════════════════════════════════════════════
+function renderPatterns() {
+  const allDays = Object.entries(state.days).sort((a,b)=>b[0].localeCompare(a[0]));
+  const el = document.getElementById('tab-content');
+  if (allDays.length<2) { el.innerHTML=`<div class="empty">Log at least 2 days<br>to see patterns emerge.</div>`; return; }
+
+  const allNaps = allDays.flatMap(([,n])=>n);
+  const done = allNaps.filter(n=>n.start&&n.end);
+  const avgDur = done.length>0?Math.round(done.reduce((a,n)=>a+durMins(n.start,n.end),0)/done.length):0;
+  const avgPerDay = (allNaps.length/allDays.length).toFixed(1);
+  const contactPct = allNaps.length>0?Math.round(allNaps.filter(n=>n.type==='contact').length/allNaps.length*100):0;
+  const avgWW = getAvgWakeWindow();
+
+  const sHours = done.map(n=>parseInt(n.start.split(':')[0]));
+  const hCounts={}; sHours.forEach(h=>hCounts[h]=(hCounts[h]||0)+1);
+  const commonH = Object.entries(hCounts).sort((a,b)=>b[1]-a[1])[0];
+
+  const bestPerDay = allDays.map(([,naps])=>{
+    const c=naps.filter(n=>n.start&&n.end);
+    return c.length>0?c.reduce((b,n)=>durMins(n.start,n.end)>durMins(b.start,b.end)?n:b):null;
+  }).filter(Boolean);
+  const avgBest = bestPerDay.length>0?Math.round(bestPerDay.reduce((a,n)=>a+durMins(n.start,n.end),0)/bestPerDay.length):0;
+  const bHours = bestPerDay.map(n=>parseInt(n.start.split(':')[0]));
+  const bhCounts={}; bHours.forEach(h=>bhCounts[h]=(bhCounts[h]||0)+1);
+  const bestH = Object.entries(bhCounts).sort((a,b)=>b[1]-a[1])[0];
+
+  // Progress toward 7 days
+  const progress = Math.min(allDays.length,7);
+  const progressPct = Math.round(progress/7*100);
+
+  let h = '';
+
+  if (allDays.length<7) {
+    h += `<div class="card" style="margin-bottom:10px">
+      <div class="card-label">Building patterns — ${allDays.length} of 7 days</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${progressPct}%"></div></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">Log ${7-allDays.length} more day${7-allDays.length!==1?'s':''} for full pattern analysis</div>
+    </div>`;
+  }
+
+  h += `<div class="pattern-card">
+    <div class="pattern-title">📊 ${allDays.length}-day summary</div>
+    <div class="pattern-row"><span class="p-key">Days tracked</span><span class="p-val">${allDays.length}</span></div>
+    <div class="pattern-row"><span class="p-key">Avg naps per day</span><span class="p-val">${avgPerDay}</span></div>
+    <div class="pattern-row"><span class="p-key">Avg nap length</span><span class="p-val">${fmtDur(avgDur)}</span></div>
+    <div class="pattern-row"><span class="p-key">Avg wake window</span><span class="p-val">${fmtDur(avgWW)}</span></div>
+    <div class="pattern-row"><span class="p-key">Contact naps</span><span class="p-val">${contactPct}%</span></div>
+    ${commonH?`<div class="pattern-row"><span class="p-key">Most common nap time</span><span class="p-val">~${commonH[0]}:00${parseInt(commonH[0])>=12?'pm':'am'}</span></div>`:''}
+  </div>`;
+
+  if (avgBest>0) {
+    h += `<div class="pattern-card">
+      <div class="pattern-title">🪟 Typical best window</div>
+      <div class="pattern-row"><span class="p-key">Avg longest nap</span><span class="p-val">${fmtDur(avgBest)}</span></div>
+      ${bestH?`<div class="pattern-row"><span class="p-key">Usually starts around</span><span class="p-val">~${bestH[0]}:00${parseInt(bestH[0])>=12?'pm':'am'}</span></div>`:''}
+      <div style="font-size:12px;color:var(--muted);padding-top:8px;line-height:1.6">Your most reliable window — based on your longest nap each day.</div>
+    </div>`;
+  }
+
+  // Day by day — collapsible
+  h += `<div class="section-toggle" onclick="patternsExpanded=!patternsExpanded;renderPatterns()">
+    <span class="section-toggle-label">Day by day (${allDays.length} days)</span>
+    <span class="section-toggle-chevron">${patternsExpanded?'▲ Hide':'▼ Show'}</span>
+  </div>`;
+
+  if (patternsExpanded) {
+    allDays.forEach(([date,naps])=>{
+      const sorted=[...naps].sort((a,b)=>a.start.localeCompare(b.start));
+      const total=sorted.reduce((a,n)=>a+durMins(n.start,n.end),0);
+      const d=new Date(date);
+      h+=`<div class="history-day" style="margin-bottom:6px">
+        <div class="history-day-header">
+          <div><div class="history-day-title">${d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}</div>
+          <div class="history-day-meta">${sorted.length} nap${sorted.length!==1?'s':''} · ${fmtDur(total)}</div></div>
+        </div>
+        <div class="history-day-body open" style="padding:0 14px 12px">`;
+      sorted.forEach(n=>{
+        h+=`<div class="history-nap">
+          <div style="width:8px;height:8px;border-radius:50%;background:${typeColor(n.type)};flex-shrink:0"></div>
+          <span>${fmtTime(n.start)}${n.end?' → '+fmtTime(n.end):''}</span>
+          ${durMins(n.start,n.end)>0?`<span style="color:var(--accent)">${fmtDur(durMins(n.start,n.end))}</span>`:''}
+          <span style="color:var(--muted)">${n.type==='pram'?'cot/pram':n.type}</span>
+        </div>`;
+      });
+      h+=`</div></div>`;
+    });
+  } else {
+    h += `<div style="font-size:13px;color:var(--muted);padding:6px 0;font-style:italic">Tap to show all ${allDays.length} days</div>`;
+  }
+
+  el.innerHTML = h;
+}
+
+// ══ RENDER HISTORY ═════════════════════════════════════════════
+function renderHistory() {
+  const allDays = Object.entries(state.days).sort((a,b)=>b[0].localeCompare(a[0]));
+  const el = document.getElementById('tab-content');
+  if (!allDays.length) { el.innerHTML=`<div class="empty">No history yet.<br>Start logging today!</div>`; return; }
+
+  let h = '';
+  allDays.forEach(([date,naps])=>{
+    const sorted=[...naps].sort((a,b)=>a.start.localeCompare(b.start));
+    const total=sorted.reduce((a,n)=>a+durMins(n.start,n.end),0);
+    const d=new Date(date);
+    const isToday=date===todayKey();
+    const isOpen=isToday||expandedDays.has(date);
+
+    h+=`<div class="history-day">
+      <div class="history-day-header" onclick="toggleDay('${date}')">
+        <div>
+          <div class="history-day-title">${isToday?'📅 Today':d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'})}</div>
+          <div class="history-day-meta">${sorted.length} nap${sorted.length!==1?'s':''} · ${fmtDur(total)}</div>
+        </div>
+        <span class="history-day-chevron">${isOpen?'▲':'▼'}</span>
+      </div>
+      <div class="history-day-body ${isOpen?'open':''}">`;
+
+    // Visual bar
+    h+=`<div class="day-bar">`;
+    sorted.forEach(n=>{
+      if(!n.end)return;
+      const [sh,sm]=n.start.split(':').map(Number);
+      const sp=Math.max(0,((sh*60+sm)-7*60)/780*100);
+      const wp=Math.min(100-sp,durMins(n.start,n.end)/780*100);
+      const c={contact:'#b09fec',cot:'#5ecfb0',pram:'#f0b96b'}[n.type]||'#888';
+      h+=`<div class="bar-seg" style="left:${sp}%;width:${wp}%;background:${c}"></div>`;
+    });
+    h+=`</div>`;
+
+    sorted.forEach((n,i)=>{
+      const dur=durMins(n.start,n.end);
+      h+=`<div class="history-nap">
+        <div style="width:8px;height:8px;border-radius:50%;background:${typeColor(n.type)};flex-shrink:0"></div>
+        <span>${fmtTime(n.start)}${n.end?' → '+fmtTime(n.end):' (ongoing)'}</span>
+        ${dur>0?`<span style="color:var(--accent)">${fmtDur(dur)}</span>`:''}
+        <span style="color:var(--muted)">${n.type}</span>
+        <div style="display:flex;gap:4px;margin-left:auto">
+          <button class="inline-btn inline-btn-blue" onclick="editNap('${date}',${i})">✎</button>
+          <button class="inline-btn inline-btn-red" onclick="deleteNap('${date}',${i})">×</button>
+        </div>
+      </div>`;
+    });
+    h+=`</div></div>`;
+  });
+  el.innerHTML = h;
+}
+
+// ══ RENDER SETTINGS ════════════════════════════════════════════
+function renderSettings() {
+  const cfg = state.choreConfig;
+  const ct = state.contactTasks;
+  const napCount = Object.values(state.days).reduce((a,n)=>a+n.length,0);
+  const dayCount = Object.keys(state.days).length;
+
+  const dayOpts = DAY_NAMES.map((d,i)=>`<option value="${i}" ${cfg.binDay===i?'selected':''}>${d}</option>`).join('');
+  const shopOpts = DAY_NAMES.map((d,i)=>`<option value="${i}" ${cfg.shoppingDay===i?'selected':''}>${d}</option>`).join('');
+  const restOpts = `<option value="null" ${cfg.restDay===null?'selected':''}>No rest day</option>`+DAY_NAMES.map((d,i)=>`<option value="${i}" ${cfg.restDay===i?'selected':''}>${d}</option>`).join('');
+
+  function grp(id, title, content) {
+    const open = expandedSettings.has(id);
+    return `<div class="settings-group">
+      <div class="settings-group-header" onclick="toggleSettingsGroup('${id}')">
+        <span class="settings-group-title">${title}</span>
+        <span style="font-size:12px;color:var(--accent)">${open?'▲':'▼'}</span>
+      </div>
+      <div class="settings-group-body ${open?'open':''}">${content}</div>
+    </div>`;
+  }
+
+  // Chore schedule
+  const choreContent = `
+    <div class="settings-row"><div><div class="settings-row-label">🗑️ Bin collection day</div></div>
+      <select class="select-input" style="width:auto;min-width:110px" onchange="saveChoreCfg('binDay',this.value)">${dayOpts}</select></div>
+    <div class="settings-row"><div><div class="settings-row-label">🛒 Food shopping day</div></div>
+      <select class="select-input" style="width:auto;min-width:110px" onchange="saveChoreCfg('shoppingDay',this.value)">${shopOpts}</select></div>
+    <div class="settings-row"><div><div class="settings-row-label">😌 Rest day</div></div>
+      <select class="select-input" style="width:auto;min-width:110px" onchange="saveChoreCfg('restDay',this.value)">${restOpts}</select></div>
+    <div style="padding:10px 14px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">Weekly schedule</div>
+      ${DAY_NAMES.map((day,i)=>{
+        const chore=getChoreForDay(i);
+        const auto=getAutoChoreForDay(i);
+        const isRest=chore===null;
+        const isOverride=cfg.overrides&&cfg.overrides[i]!==undefined;
+        const isAnchor=(cfg.binDay===i||cfg.shoppingDay===i||cfg.binDay!==null&&i===getPrevDay(cfg.binDay)||cfg.shoppingDay!==null&&i===getPrevDay(cfg.shoppingDay));
+        return `<div class="schedule-row">
+          <span class="schedule-day">${day}</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="schedule-task ${isRest?'schedule-rest':isOverride?'schedule-override':isAnchor?'schedule-anchor':''}">${isRest?'😌 Rest':chore}</span>
+            <button class="inline-btn inline-btn-blue" onclick="startChoreOverride(${i})" style="font-size:11px">✎</button>
+            ${isOverride?`<button class="inline-btn" onclick="clearOverride(${i})" style="font-size:11px">↺</button>`:''}
+          </div>
+        </div>
+        <div id="co-edit-${i}" style="display:none;padding:8px 14px;background:var(--card2);border-top:1px solid var(--border)">
+          <input type="text" id="co-input-${i}" value="${isOverride?chore:isRest?'':auto||''}"
+            placeholder="Custom chore..."
+            style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:8px 10px;width:100%;outline:none;font-family:'Inter',sans-serif;margin-bottom:6px">
+          <div style="display:flex;gap:6px">
+            <button class="btn-primary" style="padding:9px;font-size:13px" onclick="saveOverride(${i})">Save</button>
+            <button class="btn-secondary" style="padding:9px;font-size:13px" onclick="cancelOverride(${i})">Cancel</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // Contact tasks
+  const taskContent = ct.categories.map((cat,ci)=>`
+    <div style="border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">${cat.icon}</span>
+          <span style="font-size:14px;font-weight:600">${cat.label}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${cat.active?`<button class="inline-btn inline-btn-blue" onclick="addTask(${ci})" style="font-size:11px">+ Add</button>`:''}
+          <div class="toggle-switch ${cat.active?'on':'off'}" onclick="toggleCat(${ci})"><div class="toggle-knob"></div></div>
+        </div>
+      </div>
+      ${cat.active?`
+        ${cat.tasks.map((t,ti)=>`
+          <div class="task-row">
+            <span class="task-rank">${ti+1}</span>
+            <span class="task-label">${t.label}</span>
+            <span class="task-mins">${t.minMins}m+</span>
+            <div style="display:flex;gap:3px">
+              ${ti>0?`<button class="inline-btn" onclick="moveTask(${ci},${ti},-1)">↑</button>`:'<div style="width:28px"></div>'}
+              ${ti<cat.tasks.length-1?`<button class="inline-btn" onclick="moveTask(${ci},${ti},1)">↓</button>`:'<div style="width:28px"></div>'}
+              <button class="inline-btn inline-btn-red" onclick="removeTask(${ci},${ti})">×</button>
+            </div>
+          </div>`).join('')}
+        <div class="add-task-form" id="add-form-${ci}">
+          <input type="text" id="new-task-${ci}" placeholder="Task name..."
+            style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:8px 10px;width:100%;outline:none;font-family:'Inter',sans-serif;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:12px;color:var(--muted);flex-shrink:0">Min mins:</span>
+            <input type="number" id="new-mins-${ci}" value="10" min="1" max="120"
+              style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:7px 10px;width:70px;outline:none;font-family:'Inter',sans-serif">
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn-primary" style="padding:9px;font-size:13px" onclick="saveTask(${ci})">Save</button>
+            <button class="btn-secondary" style="padding:9px;font-size:13px" onclick="document.getElementById('add-form-${ci}').classList.remove('open')">Cancel</button>
+          </div>
+        </div>`:''}
+    </div>`).join('');
+
+  // Data
+  const dataContent = `
+    <div class="settings-row"><div><div class="settings-row-label">Days logged</div></div><span class="settings-row-val">${dayCount}</span></div>
+    <div class="settings-row"><div><div class="settings-row-label">Total naps</div></div><span class="settings-row-val">${napCount}</span></div>
+    <div style="padding:12px 14px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">Export — copy before any update</div>
+      <textarea class="export-box" readonly onclick="this.select()">${JSON.stringify(state)}</textarea>
+      <button class="btn-primary" onclick="copyExport()">📋 Copy to clipboard</button>
+      <div id="copy-ok" style="text-align:center;font-size:13px;color:var(--teal);margin-top:6px;display:none">✓ Copied!</div>
+    </div>
+    <div style="padding:12px 14px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">Import — restore after update</div>
+      <textarea id="import-box" class="export-box" placeholder="Paste exported data here..."></textarea>
+      <button class="btn-secondary" onclick="importData()">📥 Restore data</button>
+      <div id="import-ok"  style="text-align:center;font-size:13px;color:var(--teal);margin-top:6px;display:none"></div>
+      <div id="import-err" style="text-align:center;font-size:13px;color:var(--red);margin-top:6px;display:none"></div>
+    </div>`;
+
+  const bp = state.babyProfile || defaultState().babyProfile;
+  const sc = state.safetyCheck || defaultState().safetyCheck;
+  const safetyContent = `
+    <div class="settings-row">
+      <div><div class="settings-row-label">👂 Cot nap check-ins</div>
+        <div class="settings-row-sub">Gentle reminder when baby is in cot</div></div>
+      <div class="toggle-switch ${sc.cotEnabled?'on':'off'}" onclick="toggleSafety('cotEnabled')"><div class="toggle-knob"></div></div>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-row-label">🛌 Pram nap reminders</div>
+        <div class="settings-row-sub">Reminder to stay nearby when out</div></div>
+      <div class="toggle-switch ${sc.pramEnabled?'on':'off'}" onclick="toggleSafety('pramEnabled')"><div class="toggle-knob"></div></div>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-row-label">⏱️ Check-in interval</div>
+        <div class="settings-row-sub">How often the reminder appears</div></div>
+      <select class="select-input" style="width:auto;min-width:110px" onchange="setSafetyInterval(this.value)">
+        <option value="20" ${sc.intervalMins===20?'selected':''}>Every 20 mins</option>
+        <option value="30" ${sc.intervalMins===30||!sc.intervalMins?'selected':''}>Every 30 mins</option>
+        <option value="45" ${sc.intervalMins===45?'selected':''}>Every 45 mins</option>
+        <option value="60" ${sc.intervalMins===60?'selected':''}>Every 60 mins</option>
+      </select>
+    </div>
+    <div style="padding:12px 14px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">Preview message</div>
+      <div style="font-size:13px;color:var(--teal);background:#1a2a1a;border:1px solid var(--teal);border-radius:10px;padding:10px 12px;line-height:1.5">
+        ${(sc.cotMessage||'').replace('{mins}', sc.intervalMins||30)}
+      </div>
+    </div>`;
+
+  const babyContent = `
+    <div class="settings-row">
+      <div><div class="settings-row-label">👶 Baby's name</div>
+        <div class="settings-row-sub">Used in personalised messages</div></div>
+      <input type="text" value="${bp.name||''}" placeholder="e.g. Aria"
+        onblur="saveBabyProfile('name',this.value)"
+        style="background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;padding:7px 10px;width:110px;outline:none;text-align:right">
+    </div>
+    <div class="settings-row" style="border-bottom:none">
+      <div><div class="settings-row-label">Gender</div>
+        <div class="settings-row-sub">Used for she/he in night messages</div></div>
+      <div style="display:flex;gap:6px">
+        ${['girl','boy','unset'].map(g=>`
+          <button onclick="saveBabyProfile('gender','${g}')"
+            style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid ${bp.gender===g||(g==='unset'&&!bp.gender)?'var(--accent)':'var(--border)'};background:${bp.gender===g||(g==='unset'&&!bp.gender)?'var(--accentSub, #1a2a3a)':'var(--card2)'};color:${bp.gender===g||(g==='unset'&&!bp.gender)?'var(--accent)':'var(--muted)'};font-family:'Inter',sans-serif">
+            ${g==='girl'?'Girl':g==='boy'?'Boy':'–'}
+          </button>`).join('')}
+      </div>
+    </div>`;
+
+  document.getElementById('tab-content').innerHTML =
+    grp('baby',         '👶 Baby profile',          babyContent) +
+    grp('chores',       '🧹 Chore schedule',        choreContent) +
+    grp('contact-tasks','📱 Contact nap tasks',      taskContent) +
+    grp('safety',       '🛡️ Safety checks',         safetyContent) +
+    grp('data',         '📦 Data',                   dataContent) +
+    `<div class="version-note">v2.1.0</div>`;
+}
+
+// ══ ACTIONS ════════════════════════════════════════════════════
+function quickNap(type) {
+  const key=todayKey();
+  if(!state.days[key])state.days[key]=[];
+  state.days[key].push({start:nowStr(),end:'',type});
+  saveState(); toast(`${type.charAt(0).toUpperCase()+type.slice(1)} nap started`); render();
+}
+
+function endOngoingNap() {
+  const key=todayKey();
+  const n=(state.days[key]||[]).find(n=>n.start&&!n.end);
+  if(n){ n.end=nowStr(); saveState(); toast(`Nap ended · ${fmtDur(durMins(n.start,n.end))}`); render(); }
+}
+
+function setWake(v) { state.wakeTime=v; state.wakeDate=todayKey(); saveState(); toast('Wake time saved'); render(); }
+function setBed(v)  { state.bedTime=v;  state.bedDate=todayKey();  saveState(); toast('Bedtime saved'); render(); }
+
+function toggleChoreDone() {
+  state.choreDone = !state.choreDone;
+  state.choreDoneDate = todayKey();
+  saveState();
+  toast(state.choreDone ? '✓ Chore done!' : 'Chore unmarked');
+  render();
+}
+
+function deleteNap(dateKey, index) {
+  if(!state.days[dateKey])return;
+  state.days[dateKey].splice(index,1);
+  if(!state.days[dateKey].length)delete state.days[dateKey];
+  saveState(); toast('Nap deleted'); render();
+}
+
+function toggleDay(date) {
+  if(expandedDays.has(date))expandedDays.delete(date);
+  else expandedDays.add(date);
+  renderHistory();
+}
+
+function toggleSettingsGroup(id) {
+  if(expandedSettings.has(id))expandedSettings.delete(id);
+  else expandedSettings.add(id);
+  renderSettings();
+}
+
+// ── Form ──
+function openForm() {
+  formEditingNap=null; formSelectedType='contact';
+  document.getElementById('f-date').value=todayKey();
+  document.getElementById('f-start').value=nowStr();
+  document.getElementById('f-end').value='';
+  document.getElementById('form-title').textContent='Log past nap';
+  document.getElementById('form-save-btn').textContent='Save nap';
+  updateTypePills();
+  document.getElementById('form-overlay').classList.add('open');
+}
+
+function editNap(dateKey, index) {
+  const nap=state.days[dateKey]?.[index];
+  if(!nap)return;
+  formEditingNap={dateKey,index}; formSelectedType=nap.type||'contact';
+  document.getElementById('f-date').value=dateKey;
+  document.getElementById('f-start').value=nap.start||'';
+  document.getElementById('f-end').value=nap.end||'';
+  document.getElementById('form-title').textContent='Edit nap';
+  document.getElementById('form-save-btn').textContent='Update nap';
+  updateTypePills();
+  document.getElementById('form-overlay').classList.add('open');
+}
+
+function closeForm() { document.getElementById('form-overlay').classList.remove('open'); }
+
+function handleOverlayClick(e) { if(e.target===document.getElementById('form-overlay'))closeForm(); }
+
+function selType(t) { formSelectedType=t; updateTypePills(); }
+
+function updateTypePills() {
+  document.querySelectorAll('.type-pill').forEach((p,i)=>{
+    const types=['contact','cot','pram'];
+    p.className=`type-pill${formSelectedType===types[i]?' sel-'+types[i]:''}`;
+  });
+}
+
+function saveForm() {
+  const start=document.getElementById('f-start').value;
+  const end=document.getElementById('f-end').value;
+  const date=document.getElementById('f-date').value;
+  if(!start||!date){toast('Please fill in start time');return;}
+  if(formEditingNap){
+    state.days[formEditingNap.dateKey][formEditingNap.index]={start,end:end||'',type:formSelectedType};
+    toast('Nap updated');
+  } else {
+    if(!state.days[date])state.days[date]=[];
+    state.days[date].push({start,end:end||'',type:formSelectedType});
+    toast('Nap saved');
+  }
+  saveState(); closeForm(); render();
+}
+
+// ── Chore overrides ──
+function saveChoreCfg(field,val) {
+  state.choreConfig[field]=val==='null'?null:parseInt(val);
+  saveState(); renderSettings();
+}
+function startChoreOverride(i) { document.getElementById(`co-edit-${i}`).style.display='block'; document.getElementById(`co-input-${i}`)?.focus(); }
+function cancelOverride(i) { document.getElementById(`co-edit-${i}`).style.display='none'; }
+function saveOverride(i) {
+  const val=document.getElementById(`co-input-${i}`)?.value.trim();
+  if(!state.choreConfig.overrides)state.choreConfig.overrides={};
+  if(val)state.choreConfig.overrides[i]=val; else delete state.choreConfig.overrides[i];
+  saveState(); renderSettings();
+}
+function clearOverride(i) { delete state.choreConfig.overrides[i]; saveState(); renderSettings(); }
+
+// ── Contact tasks ──
+function toggleCat(ci) { state.contactTasks.categories[ci].active=!state.contactTasks.categories[ci].active; saveState(); renderSettings(); }
+function addTask(ci) { document.getElementById(`add-form-${ci}`).classList.add('open'); document.getElementById(`new-task-${ci}`)?.focus(); }
+function saveTask(ci) {
+  const label=document.getElementById(`new-task-${ci}`)?.value.trim();
+  const mins=parseInt(document.getElementById(`new-mins-${ci}`)?.value)||10;
+  if(!label)return;
+  const cat=state.contactTasks.categories[ci];
+  const maxP=cat.tasks.reduce((m,t)=>Math.max(m,t.priority),0);
+  cat.tasks.push({id:`t${Date.now()}`,label,minMins:mins,priority:maxP+1});
+  saveState(); renderSettings();
+}
+function removeTask(ci,ti) {
+  state.contactTasks.categories[ci].tasks.splice(ti,1);
+  state.contactTasks.categories[ci].tasks.forEach((t,i)=>t.priority=i+1);
+  saveState(); renderSettings();
+}
+function moveTask(ci,ti,dir) {
+  const tasks=state.contactTasks.categories[ci].tasks;
+  const ni=ti+dir;
+  if(ni<0||ni>=tasks.length)return;
+  [tasks[ti],tasks[ni]]=[tasks[ni],tasks[ti]];
+  tasks.forEach((t,i)=>t.priority=i+1);
+  saveState(); renderSettings();
+}
+
+// ── Safety settings ──
+function saveBabyProfile(field, value) {
+  if (!state.babyProfile) state.babyProfile = defaultState().babyProfile;
+  if (field === 'gender') {
+    state.babyProfile.gender = value === 'unset' ? null : value;
+  } else {
+    state.babyProfile[field] = value.trim() || null;
+  }
+  saveState(); renderSettings();
+}
+
+function toggleSafety(field) {
+  if (!state.safetyCheck) state.safetyCheck = defaultState().safetyCheck;
+  state.safetyCheck[field] = !state.safetyCheck[field];
+  saveState(); renderSettings();
+}
+
+function setSafetyInterval(val) {
+  if (!state.safetyCheck) state.safetyCheck = defaultState().safetyCheck;
+  state.safetyCheck.intervalMins = parseInt(val);
+  lastSafetyCheckMins = 0;
+  saveState(); renderSettings();
+}
+
+// ── Export/Import ──
+function copyExport() {
+  const box=document.querySelector('.export-box[readonly]');
+  if(!box)return;
+  box.select();
+  try { navigator.clipboard.writeText(box.value).catch(()=>document.execCommand('copy')); } catch(e) { document.execCommand('copy'); }
+  const ok=document.getElementById('copy-ok');
+  if(ok){ok.style.display='block';setTimeout(()=>ok.style.display='none',2500);}
+}
+function importData() {
+  const raw=document.getElementById('import-box')?.value.trim();
+  const ok=document.getElementById('import-ok');
+  const err=document.getElementById('import-err');
+  if(ok)ok.style.display='none'; if(err)err.style.display='none';
+  if(!raw){if(err){err.textContent='Paste your export first';err.style.display='block';}return;}
+  try {
+    const parsed=JSON.parse(raw);
+    if(!parsed.days)throw new Error();
+    const nc=Object.values(parsed.days).reduce((a,n)=>a+n.length,0);
+    const dc=Object.keys(parsed.days).length;
+    state=parsed; saveState();
+    if(ok){ok.textContent=`✓ Restored ${nc} naps across ${dc} days`;ok.style.display='block';}
+    setTimeout(()=>render(),1500);
+  } catch(e) {
+    if(err){err.textContent="Couldn't read that — make sure you copied the full export";err.style.display='block';}
+  }
+}
+
+// ══ SAFETY CHECK ═══════════════════════════════════════════════
+let lastSafetyCheckMins = 0;
+
+function checkSafetyAlert(ongoing) {
+  if (!ongoing || ongoing.type === 'contact') { lastSafetyCheckMins = 0; return; }
+  const bp = state.babyProfile || defaultState().babyProfile;
+  const sc = state.safetyCheck || defaultState().safetyCheck;
+  if (ongoing.type === 'cot' && !sc.cotEnabled) return;
+  if (ongoing.type === 'pram' && !sc.pramEnabled) return;
+
+  const elapsed = durMins(ongoing.start, nowStr());
+  const interval = sc.intervalMins || 30;
+
+  // Fire at each interval threshold (30, 60, 90 etc.)
+  const threshold = Math.floor(elapsed / interval) * interval;
+  if (threshold > 0 && threshold !== lastSafetyCheckMins && elapsed >= threshold && elapsed < threshold + 2) {
+    lastSafetyCheckMins = threshold;
+    const msg = ongoing.type === 'pram'
+      ? (sc.pramMessage || '🛌 Baby in pram — stay nearby. {mins} mins into this nap.')
+      : (sc.cotMessage  || '👂 Quick check — baby in cot for {mins} mins. Just a gentle nudge to listen out.');
+    showSafetyToast(msg.replace('{mins}', elapsed));
+  }
+}
+
+function showSafetyToast(msg) {
+  const el = document.getElementById('safety-toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 6000);
+}
+
+// ══ INIT ═══════════════════════════════════════════════════════
+render();
+setInterval(() => {
+  if (currentTab === 'today') {
+    render();
+    // Check safety alert on each tick
+    const naps = getTodayNaps();
+    const ongoing = naps.find(n => n.start && !n.end);
+    checkSafetyAlert(ongoing);
+  }
+}, 60000);
+</script>
+</body>
+</html>
