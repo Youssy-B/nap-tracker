@@ -583,6 +583,47 @@ body {
 .history-nap { font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; }
 .history-nap:last-child { border-bottom: none; }
 
+/* ── FOCUS PICKER ── */
+.focus-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 300;
+  display: flex; align-items: flex-end;
+}
+
+.focus-sheet {
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  padding: 20px 16px 40px;
+  width: 100%;
+  border-top: 1px solid var(--border);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.focus-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: all 0.15s;
+}
+
+.focus-option:active { transform: scale(0.97); }
+.focus-option.selected { border-color: var(--accent); background: var(--accentSub, #1a2a3a); }
+.focus-option-icon { font-size: 22px; flex-shrink: 0; }
+.focus-option-label { font-size: 15px; font-weight: 600; color: var(--text); }
+.focus-option-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
 /* ── SETTINGS ── */
 .settings-group { background: var(--card); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 10px; overflow: hidden; }
 .settings-group-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
@@ -754,6 +795,7 @@ body {
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="focus-overlay" id="focus-overlay" style="display:none" onclick="handleFocusOverlayClick(event)"></div>
 <div class="safety-toast" id="safety-toast"></div>
 
 <script>
@@ -917,7 +959,7 @@ let formEditingNap = null; // {dateKey, index}
 let formSelectedType = 'contact';
 let expandedDays = new Set();
 let patternsExpanded = false;
-let expandedSettings = new Set(['chores','contact-tasks']);
+let expandedSettings = new Set(['baby','chores','contact-tasks','safety','data']);
 let choreDayExpanded = false;
 
 // ══ HELPERS ════════════════════════════════════════════════════
@@ -1019,9 +1061,15 @@ function getAutoChoreForDay(dayIndex) {
 }
 
 // ══ CONTACT SUGGESTION — multi-task time-sliced ══════════════
-function getContactSuggestion(napMins) {
+function getContactSuggestion(napMins, focusCategoryId) {
+  // If a focus category is set, only use tasks from that category
   const ct = state.contactTasks;
-  const active = ct.categories.filter(c=>c.active);
+  let active = ct.categories.filter(c=>c.active);
+  // Filter to focus category if set
+  if (focusCategoryId) {
+    const focused = active.filter(c=>c.id===focusCategoryId);
+    if (focused.length) active = focused;
+  }
   if (!active.length) return {
     current: { label:'Phone task', detail:'Add tasks in Settings → Contact nap tasks', cls:'badge-short' },
     completed: [], next: null
@@ -1135,15 +1183,17 @@ function renderToday() {
 
     // Suggestion
     if (ongoing.type==='contact') {
-      const sug = getContactSuggestion(elapsed);
+      // Get focus from this nap if set
+      const napFocus = ongoing.focus || null;
+      const sug = getContactSuggestion(elapsed, napFocus);
       let compHtml = '';
       if (sug.completed && sug.completed.length>0) {
         compHtml = `<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
-          ✓ Already had time for: ${sug.completed.map(t=>`${t.catIcon} ${t.label}`).join(' · ')}
+          ✓ Done: ${sug.completed.map(t=>`${t.catIcon} ${t.label}`).join(' · ')}
         </div>`;
       }
       let nextHtml = '';
-      if (sug.next) {
+      if (sug.next && !napFocus) {
         nextHtml = `<div style="font-size:11px;color:var(--muted);margin-top:4px">
           Next: ${sug.next.catIcon} ${sug.next.label} at ${sug.next.minMins}m
         </div>`;
@@ -1620,10 +1670,73 @@ function renderSettings() {
 
 // ══ ACTIONS ════════════════════════════════════════════════════
 function quickNap(type) {
+  pendingNapType = type;
+  showFocusPicker(type);
+}
+
+function startNapWithFocus(type, focusCategoryId) {
   const key=todayKey();
   if(!state.days[key])state.days[key]=[];
-  state.days[key].push({start:nowStr(),end:'',type});
-  saveState(); toast(`${type.charAt(0).toUpperCase()+type.slice(1)} nap started`); render();
+  state.days[key].push({start:nowStr(),end:'',type,focus:focusCategoryId||null});
+  saveState();
+  hideFocusPicker();
+  toast(`${type==='contact'?'📱 Contact':'🛌 Cot / Pram'} nap started`);
+  render();
+}
+
+function showFocusPicker(type) {
+  const ct = state.contactTasks || defaultState().contactTasks;
+  const activeCategories = ct.categories.filter(c => c.active);
+  const isContact = type === 'contact';
+
+  const options = activeCategories.map(cat => `
+    <div class="focus-option" onclick="startNapWithFocus('${type}','${cat.id}')">
+      <span class="focus-option-icon">${cat.icon}</span>
+      <div>
+        <div class="focus-option-label">${cat.label}</div>
+        <div class="focus-option-sub">${cat.tasks.slice(0,2).map(t=>t.label).join(' · ')}</div>
+      </div>
+    </div>
+  `).join('');
+
+  const overlay = document.getElementById('focus-overlay');
+  overlay.innerHTML = `
+    <div class="focus-sheet">
+      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
+      <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px">
+        ${isContact ? '📱 Contact nap' : '🛌 Cot / Pram nap'}
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:18px">
+        What do you want to focus on?
+      </div>
+      ${options}
+      <button onclick="startNapWithFocus('${type}',null)"
+        style="width:100%;background:transparent;border:1px solid var(--border);border-radius:12px;padding:12px;color:var(--muted);font-family:'Inter',sans-serif;font-size:14px;cursor:pointer;margin-top:4px">
+        No preference — just track time
+      </button>
+    </div>
+  `;
+  overlay.style.display = 'flex';
+
+  // Auto-close after 15s if no selection
+  clearTimeout(window._focusTimer);
+  window._focusTimer = setTimeout(() => {
+    if (overlay.style.display !== 'none') {
+      startNapWithFocus(type, null);
+    }
+  }, 15000);
+}
+
+function hideFocusPicker() {
+  clearTimeout(window._focusTimer);
+  const overlay = document.getElementById('focus-overlay');
+  overlay.style.display = 'none';
+}
+
+function handleFocusOverlayClick(e) {
+  if (e.target === document.getElementById('focus-overlay')) {
+    startNapWithFocus(pendingNapType, null);
+  }
 }
 
 function endOngoingNap() {
@@ -1801,9 +1914,11 @@ function importData() {
     if(!parsed.days)throw new Error();
     const nc=Object.values(parsed.days).reduce((a,n)=>a+n.length,0);
     const dc=Object.keys(parsed.days).length;
-    state=parsed; saveState();
+    state=parsed;
+    performDailyReset(); // clear any stale daily fields from the imported data
+    saveState();
     if(ok){ok.textContent=`✓ Restored ${nc} naps across ${dc} days`;ok.style.display='block';}
-    setTimeout(()=>render(),1500);
+    setTimeout(()=>render(),1000);
   } catch(e) {
     if(err){err.textContent="Couldn't read that — make sure you copied the full export";err.style.display='block';}
   }
