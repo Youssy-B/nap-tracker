@@ -1003,7 +1003,11 @@ function getAvgWakeWindow() {
 
 function getWakeWindowMins() {
   const naps = getTodayNaps();
-  const lastEnded = naps.filter(n=>n.end).sort((a,b)=>b.end.localeCompare(a.end))[0];
+  // Only count from completed naps — not ongoing ones
+  const completedNaps = naps.filter(n=>n.end).sort((a,b)=>b.end.localeCompare(a.end));
+  const lastEnded = completedNaps[0];
+  // If there's a completed nap, count from when it ended
+  // If no naps yet today, count from wake time
   const wakeStart = lastEnded ? lastEnded.end : state.wakeTime;
   if (!wakeStart) return null;
   return durMins(wakeStart, nowStr());
@@ -1177,7 +1181,12 @@ function renderToday() {
         ${{contact:'📱 Contact',cot:'🛌 Cot / Pram',pram:'🛌 Cot / Pram'}[ongoing.type]||ongoing.type} nap in progress
       </div>
       <div class="status-main" style="color:${col}">${fmtDur(elapsed)}</div>
-      <div class="status-sub">Started ${fmtTime(ongoing.start)} · awake for ${fmtDur(durMins(ongoing.type==='contact'?state.wakeTime||'07:00':state.wakeTime||'07:00', ongoing.start))} before</div>
+      <div class="status-sub">Started ${fmtTime(ongoing.start)} · ${(()=>{
+        const prevNaps = naps.filter(n=>n.end&&n.start!==ongoing.start).sort((a,b)=>b.end.localeCompare(a.end));
+        const awakeFrom = prevNaps.length>0 ? prevNaps[0].end : state.wakeTime;
+        const awakeMins = awakeFrom ? durMins(awakeFrom, ongoing.start) : null;
+        return awakeMins && awakeMins > 0 ? `awake ${fmtDur(awakeMins)} before` : '';
+      })()}</div>
       <button class="end-btn" onclick="endOngoingNap()" style="margin-top:4px">✓ End nap now</button>
     </div>`;
 
