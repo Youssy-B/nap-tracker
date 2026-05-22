@@ -583,47 +583,6 @@ body {
 .history-nap { font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; }
 .history-nap:last-child { border-bottom: none; }
 
-/* ── FOCUS PICKER ── */
-.focus-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.65);
-  z-index: 300;
-  display: flex; align-items: flex-end;
-}
-
-.focus-sheet {
-  background: var(--surface);
-  border-radius: 24px 24px 0 0;
-  padding: 20px 16px 40px;
-  width: 100%;
-  border-top: 1px solid var(--border);
-  animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-  from { transform: translateY(100%); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-
-.focus-option {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1.5px solid var(--border);
-  background: var(--card);
-  cursor: pointer;
-  margin-bottom: 8px;
-  transition: all 0.15s;
-}
-
-.focus-option:active { transform: scale(0.97); }
-.focus-option.selected { border-color: var(--accent); background: var(--accentSub, #1a2a3a); }
-.focus-option-icon { font-size: 22px; flex-shrink: 0; }
-.focus-option-label { font-size: 15px; font-weight: 600; color: var(--text); }
-.focus-option-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
 /* ── SETTINGS ── */
 .settings-group { background: var(--card); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 10px; overflow: hidden; }
 .settings-group-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
@@ -795,7 +754,6 @@ body {
 </div>
 
 <div class="toast" id="toast"></div>
-<div class="focus-overlay" id="focus-overlay" style="display:none" onclick="handleFocusOverlayClick(event)"></div>
 <div class="safety-toast" id="safety-toast"></div>
 
 <script>
@@ -907,51 +865,13 @@ function saveState() { try { localStorage.setItem('naptracker', JSON.stringify(s
 
 let state = loadState();
 
-// ── Daily reset ─────────────────────────────────────────────
-function getDayKeys() {
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  const yest = new Date(today); yest.setDate(today.getDate()-1);
-  const yesterdayStr = yest.toISOString().split('T')[0];
-  return { today: todayStr, yesterday: yesterdayStr };
-}
-
-function performDailyReset() {
-  const { today, yesterday } = getDayKeys();
-  let changed = false;
-
-  // Wake time — reset if not from today
-  if (state.wakeDate && state.wakeDate !== today) {
-    state.wakeTime = null; state.wakeDate = null; changed = true;
-  }
-  // Bed time — reset if older than yesterday
-  // (yesterday's bedtime is valid for tonight's overnight calc)
-  if (state.bedDate && state.bedDate !== yesterday && state.bedDate !== today) {
-    state.bedTime = null; state.bedDate = null; changed = true;
-  }
-  // Chore done — reset if not from today
-  if (state.choreDoneDate && state.choreDoneDate !== today) {
-    state.choreDone = false; state.choreDoneDate = null; changed = true;
-  }
-  // Safety check counter
-  if (typeof lastSafetyCheckMins !== 'undefined') lastSafetyCheckMins = 0;
-
-  if (changed) saveState();
-}
-
-performDailyReset();
-
-// Check for midnight rollover every minute
-let _lastCheckedDate = new Date().toISOString().split('T')[0];
-setInterval(() => {
-  const currentDate = new Date().toISOString().split('T')[0];
-  if (currentDate !== _lastCheckedDate) {
-    _lastCheckedDate = currentDate;
-    performDailyReset();
-    // If on Today tab, re-render to show fresh state
-    if (currentTab === 'today') render();
-  }
-}, 60000);
+// Reset daily fields
+const _today = new Date().toISOString().split('T')[0];
+const _yest  = (()=>{ const d=new Date(); d.setDate(d.getDate()-1); return d.toISOString().split('T')[0]; })();
+if (!state.wakeDate || state.wakeDate !== _today) { state.wakeTime = null; state.wakeDate = null; }
+if (!state.bedDate  || (state.bedDate !== _yest && state.bedDate !== _today))  { state.bedTime  = null; state.bedDate  = null; }
+if (!state.choreDoneDate || state.choreDoneDate !== _today) { state.choreDone = false; state.choreDoneDate = null; }
+saveState();
 
 // ══ UI STATE ═══════════════════════════════════════════════════
 let currentTab = 'today';
@@ -1003,12 +923,8 @@ function getAvgWakeWindow() {
 
 function getWakeWindowMins() {
   const naps = getTodayNaps();
-  // Only count from completed naps — not ongoing ones
-  const completedNaps = naps.filter(n=>n.end).sort((a,b)=>b.end.localeCompare(a.end));
-  const lastEnded = completedNaps[0];
-  // If there's a completed nap, count from when it ended
-  // If no naps yet today, count from wake time
-  const wakeStart = lastEnded ? lastEnded.end : state.wakeTime;
+  const completed = naps.filter(n=>n.end).sort((a,b)=>b.end.localeCompare(a.end));
+  const wakeStart = completed.length > 0 ? completed[0].end : state.wakeTime;
   if (!wakeStart) return null;
   return durMins(wakeStart, nowStr());
 }
@@ -1065,15 +981,9 @@ function getAutoChoreForDay(dayIndex) {
 }
 
 // ══ CONTACT SUGGESTION — multi-task time-sliced ══════════════
-function getContactSuggestion(napMins, focusCategoryId) {
-  // If a focus category is set, only use tasks from that category
+function getContactSuggestion(napMins) {
   const ct = state.contactTasks;
-  let active = ct.categories.filter(c=>c.active);
-  // Filter to focus category if set
-  if (focusCategoryId) {
-    const focused = active.filter(c=>c.id===focusCategoryId);
-    if (focused.length) active = focused;
-  }
+  const active = ct.categories.filter(c=>c.active);
   if (!active.length) return {
     current: { label:'Phone task', detail:'Add tasks in Settings → Contact nap tasks', cls:'badge-short' },
     completed: [], next: null
@@ -1181,28 +1091,21 @@ function renderToday() {
         ${{contact:'📱 Contact',cot:'🛌 Cot / Pram',pram:'🛌 Cot / Pram'}[ongoing.type]||ongoing.type} nap in progress
       </div>
       <div class="status-main" style="color:${col}">${fmtDur(elapsed)}</div>
-      <div class="status-sub">Started ${fmtTime(ongoing.start)} · ${(()=>{
-        const prevNaps = naps.filter(n=>n.end&&n.start!==ongoing.start).sort((a,b)=>b.end.localeCompare(a.end));
-        const awakeFrom = prevNaps.length>0 ? prevNaps[0].end : state.wakeTime;
-        const awakeMins = awakeFrom ? durMins(awakeFrom, ongoing.start) : null;
-        return awakeMins && awakeMins > 0 ? `awake ${fmtDur(awakeMins)} before` : '';
-      })()}</div>
+      <div class="status-sub">Started ${fmtTime(ongoing.start)} · awake for ${fmtDur(durMins(ongoing.type==='contact'?state.wakeTime||'07:00':state.wakeTime||'07:00', ongoing.start))} before</div>
       <button class="end-btn" onclick="endOngoingNap()" style="margin-top:4px">✓ End nap now</button>
     </div>`;
 
     // Suggestion
     if (ongoing.type==='contact') {
-      // Get focus from this nap if set
-      const napFocus = ongoing.focus || null;
-      const sug = getContactSuggestion(elapsed, napFocus);
+      const sug = getContactSuggestion(elapsed);
       let compHtml = '';
       if (sug.completed && sug.completed.length>0) {
         compHtml = `<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
-          ✓ Done: ${sug.completed.map(t=>`${t.catIcon} ${t.label}`).join(' · ')}
+          ✓ Already had time for: ${sug.completed.map(t=>`${t.catIcon} ${t.label}`).join(' · ')}
         </div>`;
       }
       let nextHtml = '';
-      if (sug.next && !napFocus) {
+      if (sug.next) {
         nextHtml = `<div style="font-size:11px;color:var(--muted);margin-top:4px">
           Next: ${sug.next.catIcon} ${sug.next.label} at ${sug.next.minMins}m
         </div>`;
@@ -1679,73 +1582,10 @@ function renderSettings() {
 
 // ══ ACTIONS ════════════════════════════════════════════════════
 function quickNap(type) {
-  pendingNapType = type;
-  showFocusPicker(type);
-}
-
-function startNapWithFocus(type, focusCategoryId) {
   const key=todayKey();
   if(!state.days[key])state.days[key]=[];
-  state.days[key].push({start:nowStr(),end:'',type,focus:focusCategoryId||null});
-  saveState();
-  hideFocusPicker();
-  toast(`${type==='contact'?'📱 Contact':'🛌 Cot / Pram'} nap started`);
-  render();
-}
-
-function showFocusPicker(type) {
-  const ct = state.contactTasks || defaultState().contactTasks;
-  const activeCategories = ct.categories.filter(c => c.active);
-  const isContact = type === 'contact';
-
-  const options = activeCategories.map(cat => `
-    <div class="focus-option" onclick="startNapWithFocus('${type}','${cat.id}')">
-      <span class="focus-option-icon">${cat.icon}</span>
-      <div>
-        <div class="focus-option-label">${cat.label}</div>
-        <div class="focus-option-sub">${cat.tasks.slice(0,2).map(t=>t.label).join(' · ')}</div>
-      </div>
-    </div>
-  `).join('');
-
-  const overlay = document.getElementById('focus-overlay');
-  overlay.innerHTML = `
-    <div class="focus-sheet">
-      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
-      <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px">
-        ${isContact ? '📱 Contact nap' : '🛌 Cot / Pram nap'}
-      </div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:18px">
-        What do you want to focus on?
-      </div>
-      ${options}
-      <button onclick="startNapWithFocus('${type}',null)"
-        style="width:100%;background:transparent;border:1px solid var(--border);border-radius:12px;padding:12px;color:var(--muted);font-family:'Inter',sans-serif;font-size:14px;cursor:pointer;margin-top:4px">
-        No preference — just track time
-      </button>
-    </div>
-  `;
-  overlay.style.display = 'flex';
-
-  // Auto-close after 15s if no selection
-  clearTimeout(window._focusTimer);
-  window._focusTimer = setTimeout(() => {
-    if (overlay.style.display !== 'none') {
-      startNapWithFocus(type, null);
-    }
-  }, 15000);
-}
-
-function hideFocusPicker() {
-  clearTimeout(window._focusTimer);
-  const overlay = document.getElementById('focus-overlay');
-  overlay.style.display = 'none';
-}
-
-function handleFocusOverlayClick(e) {
-  if (e.target === document.getElementById('focus-overlay')) {
-    startNapWithFocus(pendingNapType, null);
-  }
+  state.days[key].push({start:nowStr(),end:'',type});
+  saveState(); toast(`${type.charAt(0).toUpperCase()+type.slice(1)} nap started`); render();
 }
 
 function endOngoingNap() {
@@ -1923,11 +1763,9 @@ function importData() {
     if(!parsed.days)throw new Error();
     const nc=Object.values(parsed.days).reduce((a,n)=>a+n.length,0);
     const dc=Object.keys(parsed.days).length;
-    state=parsed;
-    performDailyReset(); // clear any stale daily fields from the imported data
-    saveState();
+    state=parsed; saveState();
     if(ok){ok.textContent=`✓ Restored ${nc} naps across ${dc} days`;ok.style.display='block';}
-    setTimeout(()=>render(),1000);
+    setTimeout(()=>render(),1500);
   } catch(e) {
     if(err){err.textContent="Couldn't read that — make sure you copied the full export";err.style.display='block';}
   }
