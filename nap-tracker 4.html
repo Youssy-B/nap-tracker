@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nap Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0d0f14;
+  --surface:  #161920;
+  --card:     #1e2129;
+  --card2:    #252830;
+  --border:   #2c303c;
+  --accent:   #7eb8f7;
+  --text:     #eaecf2;
+  --muted:    #6b7080;
+  --subtle:   #3a3f50;
+  --amber:    #f0b96b;
+  --teal:     #5ecfb0;
+  --purple:   #b09fec;
+  --red:      #e88080;
+  --green:    #5ecfb0;
+  --contact-bg:  #1e1a2e;
+  --contact-col: #b09fec;
+  --cot-bg:      #122a22;
+  --cot-col:     #5ecfb0;
+  --pram-bg:     #2a1e0a;
+  --pram-col:    #f0b96b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.5; display: flex; flex-direction: column; height: 100dvh; }
+.app-header { padding: 16px 16px 8px; flex-shrink: 0; background: var(--bg); }
+.header-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; }
+.app-title { font-size: 11px; font-weight: 600; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+.app-date { font-size: 12px; color: var(--muted); }
+.tabs { display: flex; gap: 3px; background: var(--surface); border-radius: 12px; padding: 3px; }
+.tab { flex: 1; padding: 8px 4px; border-radius: 10px; font-size: 13px; font-weight: 500; text-align: center; cursor: pointer; color: var(--muted); transition: all 0.2s; white-space: nowrap; }
+.tab.active { background: var(--card2); color: var(--text); font-weight: 600; }
+.tab-content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding: 12px 16px 100px; }
+.toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px); background: var(--card2); border: 1px solid var(--border); border-radius: 24px; padding: 10px 20px; font-size: 13px; font-weight: 600; color: var(--text); z-index: 1000; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); white-space: nowrap; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+.toast.show { transform: translateX(-50%) translateY(0); }
+.safety-toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-120px); background: #1a2a1a; border: 1px solid var(--teal); border-radius: 16px; padding: 12px 18px; font-size: 13px; color: var(--teal); z-index: 999; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1); max-width: 320px; text-align: center; line-height: 1.5; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+.safety-toast.show { transform: translateX(-50%) translateY(0); }
+.fab { position: fixed; bottom: 24px; right: 16px; background: var(--accent); color: #0d0f14; border: none; border-radius: 28px; padding: 13px 20px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 4px 24px rgba(126,184,247,0.25); z-index: 100; transition: transform 0.15s, opacity 0.15s; display: flex; align-items: center; gap: 6px; }
+.fab:active { transform: scale(0.94); }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 10px; }
+.card-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+.status-card { border-radius: 20px; padding: 18px; margin-bottom: 10px; position: relative; overflow: hidden; }
+.status-card.idle { background: var(--surface); border: 1px solid var(--border); }
+.status-card.napping-contact { background: var(--contact-bg); border: 1px solid var(--contact-col); }
+.status-card.napping-cot { background: var(--cot-bg); border: 1px solid var(--cot-col); }
+.status-card.napping-pram { background: var(--pram-bg); border: 1px solid var(--pram-col); }
+.status-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+.status-main { font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; margin-bottom: 4px; }
+.status-sub { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+.live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.5; transform:scale(0.8); } }
+.nap-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.nap-btn { border: none; border-radius: 14px; padding: 14px 12px; cursor: pointer; text-align: left; transition: transform 0.12s, opacity 0.12s; }
+.nap-btn:active { transform: scale(0.95); opacity: 0.8; }
+.nap-btn-contact { background: var(--contact-bg); border: 1px solid var(--contact-col); }
+.nap-btn-cot { background: var(--cot-bg); border: 1px solid var(--cot-col); }
+.nap-btn-icon { font-size: 20px; margin-bottom: 6px; display: block; }
+.nap-btn-title { font-size: 14px; font-weight: 700; display: block; }
+.nap-btn-sub { font-size: 11px; margin-top: 2px; display: block; opacity: 0.8; }
+.contact-col { color: var(--contact-col); }
+.cot-col { color: var(--cot-col); }
+.end-btn { width: 100%; background: transparent; border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s; font-family: 'Inter', sans-serif; }
+.end-btn:active { background: var(--card2); }
+.suggestion { border-radius: 14px; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.suggestion-contact { background: #1a1a2e; border: 1px solid #3a3260; }
+.suggestion-free { background: #122a1e; border: 1px solid #2a5040; }
+.suggestion-text { flex: 1; }
+.suggestion-label { font-size: 16px; font-weight: 700; margin-bottom: 3px; }
+.suggestion-detail { font-size: 12px; color: var(--muted); }
+.suggestion-badge { font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 20px; white-space: nowrap; }
+.badge-study { background: #1a2a3a; color: var(--accent); }
+.badge-chore { background: #1a2a1a; color: var(--teal); }
+.badge-rest { background: #1a1a2a; color: var(--purple); }
+.badge-short { background: var(--card2); color: var(--muted); }
+.chore-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+.chore-done { opacity: 0.5; }
+.chore-done .chore-name { text-decoration: line-through; }
+.chore-left { flex: 1; }
+.chore-eyebrow { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 3px; }
+.chore-name { font-size: 15px; font-weight: 600; }
+.chore-hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.chore-tick { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.15s; flex-shrink: 0; }
+.chore-tick.done { background: var(--teal); border-color: var(--teal); }
+.sleep-strip { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
+.sleep-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; text-align: center; }
+.sleep-num { font-size: 18px; font-weight: 800; line-height: 1; margin-bottom: 3px; }
+.sleep-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.wake-card { border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+.wake-ok { background: var(--surface); border: 1px solid var(--border); }
+.wake-amber { background: #2a1e06; border: 1px solid var(--amber); }
+.wake-red { background: #2a1010; border: 1px solid var(--red); }
+.wake-left { flex: 1; }
+.wake-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 2px; }
+.wake-ok .wake-eyebrow { color: var(--muted); }
+.wake-amber .wake-eyebrow { color: var(--amber); }
+.wake-red .wake-eyebrow { color: var(--red); }
+.wake-time { font-size: 26px; font-weight: 800; line-height: 1; }
+.wake-ok .wake-time { color: var(--text); }
+.wake-amber .wake-time { color: var(--amber); }
+.wake-red .wake-time { color: var(--red); }
+.wake-hint { font-size: 12px; margin-top: 3px; }
+.wake-ok .wake-hint { color: var(--muted); }
+.wake-amber .wake-hint { color: var(--amber); }
+.wake-red .wake-hint { color: var(--red); }
+.wake-avg { font-size: 11px; color: var(--muted); text-align: right; line-height: 1.6; }
+.night-card { background: linear-gradient(135deg,#1a1a2e,#161920); border: 1px solid var(--purple); border-radius: 16px; padding: 16px; margin-bottom: 10px; }
+.progress-bar { background: var(--border); border-radius: 4px; height: 4px; overflow: hidden; margin-top: 6px; }
+.progress-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.4s ease; }
+.nap-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.nap-item:last-child { border-bottom: none; }
+.nap-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.dot-contact { background: var(--contact-col); }
+.dot-cot { background: var(--cot-col); }
+.dot-pram { background: var(--pram-col); }
+.nap-time { font-size: 14px; font-weight: 600; flex: 1; }
+.nap-dur { font-size: 13px; color: var(--accent); }
+.nap-type { font-size: 11px; color: var(--muted); }
+.icon-btn { background: none; border: none; cursor: pointer; padding: 4px 6px; font-size: 15px; line-height: 1; }
+.form-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; display: none; align-items: flex-end; }
+.form-overlay.open { display: flex; }
+.form-sheet { background: var(--surface); border-radius: 24px 24px 0 0; padding: 20px 16px 40px; width: 100%; max-height: 85vh; overflow-y: auto; border-top: 1px solid var(--border); }
+.sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+.sheet-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
+.field-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 6px; display: block; }
+.field-input { background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 15px; padding: 10px 12px; width: 100%; outline: none; margin-bottom: 14px; }
+.field-input:focus { border-color: var(--accent); }
+.type-pills { display: flex; gap: 6px; margin-bottom: 14px; }
+.type-pill { padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all 0.15s; }
+.type-pill.sel-contact { background: var(--contact-bg); color: var(--contact-col); border-color: var(--contact-col); }
+.type-pill.sel-cot { background: var(--cot-bg); color: var(--cot-col); border-color: var(--cot-col); }
+.type-pill.sel-pram { background: var(--pram-bg); color: var(--pram-col); border-color: var(--pram-col); }
+.btn-primary { background: var(--accent); color: #0d0f14; border: none; border-radius: 12px; padding: 13px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 15px; cursor: pointer; width: 100%; margin-bottom: 8px; }
+.btn-secondary { background: transparent; border: 1px solid var(--border); border-radius: 12px; padding: 11px; font-family: 'Inter', sans-serif; font-size: 14px; color: var(--muted); cursor: pointer; width: 100%; }
+.pattern-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 10px; }
+.pattern-title { font-size: 15px; font-weight: 700; color: var(--accent); margin-bottom: 10px; }
+.pattern-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.pattern-row:last-child { border-bottom: none; }
+.p-key { color: var(--muted); }
+.p-val { font-weight: 600; }
+.section-toggle { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 10px 0; margin-bottom: 6px; }
+.section-toggle-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.section-toggle-chevron { font-size: 12px; color: var(--accent); }
+.history-day { background: var(--card); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 8px; overflow: hidden; }
+.history-day-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; cursor: pointer; }
+.history-day-title { font-weight: 700; font-size: 14px; color: var(--accent); }
+.history-day-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.history-day-chevron { font-size: 12px; color: var(--accent); }
+.history-day-body { padding: 0 14px 12px; display: none; }
+.history-day-body.open { display: block; }
+.day-bar { height: 7px; background: var(--border); border-radius: 4px; position: relative; overflow: hidden; margin: 8px 0; }
+.bar-seg { position: absolute; height: 100%; border-radius: 2px; opacity: 0.85; }
+.history-nap { font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; }
+.history-nap:last-child { border-bottom: none; }
+.settings-group { background: var(--card); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 10px; overflow: hidden; }
+.settings-group-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+.settings-group-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.settings-group-body { display: none; border-top: 1px solid var(--border); }
+.settings-group-body.open { display: block; }
+.settings-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.settings-row:last-child { border-bottom: none; }
+.settings-row-label { font-size: 15px; }
+.settings-row-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.settings-row-val { font-size: 14px; color: var(--accent); }
+.toggle-switch { width: 42px; height: 24px; border-radius: 12px; position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+.toggle-switch.on { background: var(--accent); }
+.toggle-switch.off { background: var(--subtle); }
+.toggle-knob { position: absolute; width: 18px; height: 18px; background: white; border-radius: 50%; top: 3px; transition: left 0.2s; }
+.toggle-switch.on .toggle-knob { left: 21px; }
+.toggle-switch.off .toggle-knob { left: 3px; }
+.select-input { background: var(--card2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; padding: 8px 12px; outline: none; appearance: none; width: 100%; margin-top: 6px; }
+.schedule-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.schedule-row:last-child { border-bottom: none; }
+.schedule-day { font-size: 13px; font-weight: 600; color: var(--muted); min-width: 90px; }
+.schedule-task { font-size: 14px; text-align: right; flex: 1; }
+.schedule-override { color: var(--accent); }
+.schedule-anchor { color: var(--amber); }
+.schedule-rest { color: var(--muted); font-style: italic; }
+.task-row { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.task-row:last-child { border-bottom: none; }
+.task-rank { font-size: 12px; color: var(--muted); min-width: 20px; text-align: center; }
+.task-label { font-size: 14px; flex: 1; }
+.task-mins { font-size: 11px; color: var(--muted); }
+.add-task-form { padding: 12px 14px; background: var(--card2); display: none; }
+.add-task-form.open { display: block; }
+.export-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 11px; padding: 10px; width: 100%; min-height: 70px; outline: none; resize: none; line-height: 1.4; margin-bottom: 8px; }
+.weekly-card { background: linear-gradient(135deg, #1a2030, #161920); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 10px; }
+.weekly-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.weekly-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.weekly-stat { text-align: center; }
+.weekly-num { font-size: 20px; font-weight: 800; color: var(--text); line-height: 1; }
+.weekly-lbl { font-size: 10px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+.empty { text-align: center; color: var(--muted); font-size: 14px; padding: 32px 0; line-height: 2; }
+.version-note { text-align: center; font-size: 12px; color: var(--subtle); padding: 12px 0; }
+.inline-btn { background: var(--card2); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-size: 12px; padding: 5px 10px; cursor: pointer; font-family: 'Inter', sans-serif; }
+.inline-btn-blue { color: var(--accent); }
+.inline-btn-red { color: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="header-row">
+    <div class="app-title">Nap Tracker</div>
+    <div class="app-date" id="app-date"></div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('today',this)">Today</div>
+    <div class="tab" onclick="switchTab('patterns',this)">Patterns</div>
+    <div class="tab" onclick="switchTab('history',this)">History</div>
+    <div class="tab" onclick="switchTab('settings',this)">Settings</div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-content"></div>
+<button class="fab" id="fab" onclick="openForm()">+ Log nap</button>
+
+<div class="form-overlay" id="form-overlay" onclick="handleOverlayClick(event)">
+  <div class="form-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="form-title">Log nap</div>
+    <label class="field-label">Date</label>
+    <input class="field-input" type="date" id="f-date">
+    <label class="field-label">Start time</label>
+    <input class="field-input" type="time" id="f-start">
+    <label class="field-label">End time</label>
+    <input class="field-input" type="time" id="f-end">
+    <label class="field-label">Type</label>
+    <div class="type-pills">
+      <div class="type-pill sel-contact" onclick="selType('contact')">Contact</div>
+      <div class="type-pill" onclick="selType('cot')">Cot / Pram</div>
+    </div>
+    <button class="btn-primary" id="form-save-btn" onclick="saveForm()">Save nap</button>
+    <button class="btn-secondary" onclick="closeForm()">Cancel</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="safety-toast" id="safety-toast"></div>
+
+<script>
+var ROTATING_CHORES = ['Laundry on','Hoover & sweep','Bathrooms','Laundry fold & put away'];
+var DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function getNightMessages(name, pronoun) {
+  var ref = name || 'Baby';
+  var pro = pronoun;
+  return [
+    ref + "'s down. You did that. \uD83C\uDF19",
+    ref + "'s asleep. You're officially off duty. Rest well.",
+    "Another day done. You showed up for " + ref + " today. \u2728",
+    "Lights out. Go be a person for a bit. \uD83D\uDC99",
+    (pro ? pro.charAt(0).toUpperCase()+pro.slice(1) : ref) + "'s sleeping. So should you \u2014 eventually. \uD83C\uDF1B",
+    "Day complete. You carried " + (pro?'her':ref) + ", fed " + (pro?'her':ref) + ", loved " + (pro?'her':ref) + ". That counts.",
+    "The hardest job in the world, and you did it again today.",
+    "Night mode activated. Time is yours now. \uD83C\uDF1F",
+    ref + ": sleeping. You: a hero who could really use a snack.",
+    (pro ? pro.charAt(0).toUpperCase()+pro.slice(1) : ref) + "'s out. Whatever you need right now \u2014 go get it.",
+    "One more day ticked. You're doing better than you think. \uD83D\uDC9B",
+    "Sleep tight, little one. You too. \uD83C\uDF19",
+    "The night shift starts now. But first \u2014 breathe.",
+    "Day survived. " + ref + " thriving. You're the reason. \u2728"
+  ];
+}
+
+function getTonightMessage() {
+  var profile = state.babyProfile || {};
+  var name = profile.name || null;
+  var gender = profile.gender || null;
+  var pronoun = gender === 'girl' ? 'she' : gender === 'boy' ? 'he' : null;
+  var messages = getNightMessages(name, pronoun);
+  var dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(),0,0))/86400000);
+  return messages[dayOfYear % messages.length];
+}
+
+function defaultState() {
+  return {
+    schemaVersion: '2.1.0',
+    days: {},
+    wakeTime: null, wakeDate: null,
+    bedTime: null, bedDate: null,
+    choreDone: false, choreDoneDate: null,
+    babyProfile: { name: null, gender: null },
+    choreConfig: { binDay: null, shoppingDay: null, restDay: null, overrides: {} },
+    safetyCheck: { cotEnabled: true, pramEnabled: true, intervalMins: 30,
+      cotMessage: 'Quick check \u2014 baby has been in the cot for {mins} mins.',
+      pramMessage: 'Baby in pram \u2014 stay nearby. {mins} mins into this nap.' },
+    contactTasks: {
+      categories: [
+        { id:'study', icon:'\uD83D\uDCDA', label:'Study / Learning', active:true,
+          tasks:[{id:'t1',label:'Online course',minMins:20,priority:1},{id:'t2',label:'Reading',minMins:5,priority:2},{id:'t3',label:'Research / notes',minMins:10,priority:3}] },
+        { id:'career', icon:'\uD83D\uDCBC', label:'Work / Career', active:true,
+          tasks:[{id:'t4',label:'Job applications',minMins:15,priority:1},{id:'t5',label:'Update CV',minMins:20,priority:2},{id:'t6',label:'LinkedIn',minMins:10,priority:3}] },
+        { id:'admin', icon:'\uD83D\uDCF1', label:'Admin', active:true,
+          tasks:[{id:'t7',label:'Reply to messages',minMins:5,priority:1},{id:'t8',label:'Pay bills',minMins:10,priority:2},{id:'t9',label:'Book appointments',minMins:5,priority:3}] },
+        { id:'rest', icon:'\uD83E\uDDD8', label:'Rest', active:true,
+          tasks:[{id:'t10',label:'Rest / nap',minMins:5,priority:1},{id:'t11',label:'Podcast',minMins:10,priority:2},{id:'t12',label:'Mindfulness',minMins:5,priority:3}] },
+        { id:'personal', icon:'\uD83C\uDFAF', label:'Personal', active:false,
+          tasks:[{id:'t13',label:'Journal',minMins:10,priority:1},{id:'t14',label:'Plan the week',minMins:15,priority:2},{id:'t15',label:'Creative project',minMins:20,priority:3}] }
+      ]
+    }
+  };
+}
+
+function loadState() {
+  try {
+    var s = JSON.parse(localStorage.getItem('naptracker'));
+    if (!s) return defaultState();
+    var d = defaultState();
+    if (!s.contactTasks) s.contactTasks = d.contactTasks;
+    if (!s.choreConfig) s.choreConfig = d.choreConfig;
+    if (!s.choreConfig.overrides) s.choreConfig.overrides = {};
+    if (!s.babyProfile) s.babyProfile = d.babyProfile;
+    if (!s.safetyCheck) s.safetyCheck = d.safetyCheck;
+    if (s.choreDone === undefined) { s.choreDone = false; s.choreDoneDate = null; }
+    return s;
+  } catch(e) { return defaultState(); }
+}
+
+function saveState() { try { localStorage.setItem('naptracker', JSON.stringify(state)); } catch(e) {} }
+
+var state = loadState();
+
+var _today = new Date().toISOString().split('T')[0];
+var _yest = (function(){ var d=new Date(); d.setDate(d.getDate()-1); return d.toISOString().split('T')[0]; })();
+if (!state.wakeDate || state.wakeDate !== _today) { state.wakeTime = null; state.wakeDate = null; }
+if (!state.bedDate || (state.bedDate !== _yest && state.bedDate !== _today)) { state.bedTime = null; state.bedDate = null; }
+if (!state.choreDoneDate || state.choreDoneDate !== _today) { state.choreDone = false; state.choreDoneDate = null; }
+saveState();
+
+var currentTab = 'today';
+var formEditingNap = null;
+var formSelectedType = 'contact';
+var expandedDays = {};
+var patternsExpanded = false;
+var expandedSettings = {baby:true, chores:true, 'contact-tasks':true, safety:true, data:true};
+var lastSafetyCheckMins = 0;
+
+function todayKey() { return new Date().toISOString().split('T')[0]; }
+
+function nowStr() {
+  var n = new Date();
+  return pad(n.getHours()) + ':' + pad(n.getMinutes());
+}
+
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function fmtTime(t) {
+  if (!t) return '\u2014';
+  var p = t.split(':'); var hr = parseInt(p[0]);
+  return (hr>12?hr-12:hr||12) + ':' + p[1] + (hr>=12?'pm':'am');
+}
+
+function durMins(s, e) {
+  if (!s||!e) return 0;
+  var a=s.split(':').map(Number), b=e.split(':').map(Number);
+  return Math.max(0,(b[0]*60+b[1])-(a[0]*60+a[1]));
+}
+
+function fmtDur(m) {
+  if (!m||m<=0) return '\u2014';
+  if (m<60) return m+'m';
+  return Math.floor(m/60)+'h'+(m%60>0?' '+m%60+'m':'');
+}
+
+function typeColor(t) {
+  return {contact:'var(--contact-col)',cot:'var(--cot-col)',pram:'var(--pram-col)'}[t]||'var(--muted)';
+}
+
+function getTodayNaps() {
+  return (state.days[todayKey()]||[]).slice().sort(function(a,b){return a.start.localeCompare(b.start);});
+}
+
+function getNapTotal() {
+  return getTodayNaps().reduce(function(a,n){return a+durMins(n.start,n.end);},0);
+}
+
+function getAvgWakeWindow() {
+  var allNaps = Object.values(state.days).reduce(function(a,b){return a.concat(b);},[]).filter(function(n){return n.start&&n.end;});
+  if (allNaps.length<2) return 90;
+  return Math.round(allNaps.reduce(function(a,n){return a+durMins(n.start,n.end);},0)/allNaps.length);
+}
+
+function getWakeWindowMins() {
+  var naps = getTodayNaps();
+  var completed = naps.filter(function(n){return n.end;}).sort(function(a,b){return b.end.localeCompare(a.end);});
+  var wakeStart = completed.length > 0 ? completed[0].end : state.wakeTime;
+  if (!wakeStart) return null;
+  return durMins(wakeStart, nowStr());
+}
+
+function getOvernight() {
+  if (!state.bedTime || !state.wakeTime) return null;
+  var bh=state.bedTime.split(':').map(Number), wh=state.wakeTime.split(':').map(Number);
+  if (state.bedDate === todayKey() && state.wakeDate === todayKey()) return null;
+  return Math.max(0,(24*60-(bh[0]*60+bh[1]))+(wh[0]*60+wh[1]));
+}
+
+function getPrevDay(d) { return (d+6)%7; }
+
+function getChoreForDay(dayIndex) {
+  var cfg = state.choreConfig;
+  var binDay=cfg.binDay, shopDay=cfg.shoppingDay, restDay=cfg.restDay;
+  var overrides=cfg.overrides||{};
+  if (overrides[dayIndex] !== undefined) return overrides[dayIndex];
+  if (restDay!==null && restDay!==undefined && dayIndex===restDay) return null;
+  var tasks=[];
+  if (binDay!==null && binDay!==undefined && dayIndex===binDay) tasks.push('Put bins out for collection');
+  if (binDay!==null && binDay!==undefined && dayIndex===getPrevDay(binDay)) tasks.push('Empty household bins + clean fridge');
+  if (shopDay!==null && shopDay!==undefined && dayIndex===shopDay) tasks.push('Food shopping');
+  if (shopDay!==null && shopDay!==undefined && dayIndex===getPrevDay(shopDay)) tasks.push('Check fridge + write shopping list');
+  if (tasks.length>0) return tasks.join(' / ');
+  var anchors={};
+  [binDay,shopDay,restDay,binDay!==null?getPrevDay(binDay):null,shopDay!==null?getPrevDay(shopDay):null].forEach(function(d){if(d!==null&&d!==undefined)anchors[d]=1;});
+  var rotDays=[1,2,3,4,5,6,0].filter(function(d){return !anchors[d];});
+  var ri=rotDays.indexOf(dayIndex);
+  if (ri<ROTATING_CHORES.length) return ROTATING_CHORES[ri];
+  return 'Free tidy / catch-up';
+}
+
+function getContactSuggestion(napMins) {
+  var ct = state.contactTasks;
+  var active = ct.categories.filter(function(c){return c.active;});
+  if (!active.length) return { current:{label:'Phone task',detail:'Add tasks in Settings',cls:'badge-short'}, completed:[], next:null };
+  var allTasks=[];
+  active.forEach(function(cat){
+    cat.tasks.forEach(function(t){allTasks.push({id:t.id,label:t.label,minMins:t.minMins||5,priority:t.priority,catIcon:cat.icon,catLabel:cat.label});});
+  });
+  allTasks.sort(function(a,b){return (a.minMins||5)-(b.minMins||5)||a.priority-b.priority;});
+  var completed=[], current=null, next=null;
+  for (var i=0;i<allTasks.length;i++) {
+    var t=allTasks[i], minM=t.minMins||5;
+    if (napMins>=minM) {
+      var later=null;
+      for(var j=i+1;j<allTasks.length;j++){if(napMins>=(allTasks[j].minMins||5)){later=allTasks[j];break;}}
+      if (later) { completed.push(t); }
+      else {
+        current=t;
+        for(var k=0;k<allTasks.length;k++){if(napMins<(allTasks[k].minMins||5)){next=allTasks[k];break;}}
+        break;
+      }
+    }
+  }
+  if (!current) {
+    var upcoming=allTasks[0];
+    var upDetail = upcoming ? (upcoming.catIcon+' '+upcoming.label+' unlocks at '+upcoming.minMins+'m') : 'Give it a few more minutes';
+    return { current:{label:'Just starting',detail:upDetail,cls:'badge-short'}, completed:[], next:upcoming||null };
+  }
+  var cls=(current.minMins||5)>=20?'badge-study':'badge-rest';
+  return { current:{label:current.catIcon+' '+current.label,detail:current.catLabel+' \u00b7 '+current.minMins+'m+ reached',cls:cls}, completed:completed, next:next };
+}
+
+function toast(msg) {
+  var el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(function(){el.classList.remove('show');},2500);
+}
+
+function switchTab(tab, el) {
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  document.getElementById('fab').style.display=(tab==='today'||tab==='history')?'flex':'none';
+  render();
+}
+
+function render() {
+  if (currentTab==='today') renderToday();
+  else if (currentTab==='patterns') renderPatterns();
+  else if (currentTab==='history') renderHistory();
+  else renderSettings();
+}
+
+function renderToday() {
+  var naps=getTodayNaps();
+  var ongoing=naps.find(function(n){return n.start&&!n.end;});
+  var isWindDown=!!(state.bedTime&&state.bedDate===todayKey());
+  var napTotal=getNapTotal();
+  var overnight=getOvernight();
+  var totalSleep=overnight?napTotal+overnight:napTotal;
+  var chore=getChoreForDay(new Date().getDay());
+  var avgWW=getAvgWakeWindow();
+
+  document.getElementById('app-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+
+  var h='';
+
+  if (isWindDown) {
+    h+='<div class="night-card">'
+      +'<div style="font-size:11px;color:var(--purple);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">\uD83C\uDF19 Night</div>'
+      +'<div style="font-size:15px;font-weight:600;color:var(--text);line-height:1.5">'+getTonightMessage()+'</div>'
+      +'</div>';
+  } else if (ongoing) {
+    var elapsed=durMins(ongoing.start,nowStr());
+    var col=typeColor(ongoing.type);
+    var napClass='napping-'+ongoing.type;
+    var prevNaps=naps.filter(function(n){return n.end&&n.start!==ongoing.start;}).sort(function(a,b){return b.end.localeCompare(a.end);});
+    var awakeFrom=prevNaps.length>0?prevNaps[0].end:state.wakeTime;
+    var awakeMins=awakeFrom?durMins(awakeFrom,ongoing.start):null;
+    var awakeStr=awakeMins&&awakeMins>0?(' \u00b7 awake '+fmtDur(awakeMins)+' before'):'';
+
+    h+='<div class="status-card '+napClass+'">'
+      +'<div class="status-eyebrow" style="color:'+col+'"><span class="live-dot" style="background:'+col+'"></span>'
+      +({contact:'\uD83D\uDCF1 Contact',cot:'\uD83D\uDECC Cot / Pram',pram:'\uD83D\uDECC Cot / Pram'}[ongoing.type]||ongoing.type)+' nap in progress</div>'
+      +'<div class="status-main" style="color:'+col+'">'+fmtDur(elapsed)+'</div>'
+      +'<div class="status-sub">Started '+fmtTime(ongoing.start)+awakeStr+'</div>'
+      +'<button class="end-btn" onclick="endOngoingNap()">\u2713 End nap now</button>'
+      +'</div>';
+
+    if (ongoing.type==='contact') {
+      var sug=getContactSuggestion(elapsed);
+      var compHtml='';
+      if (sug.completed&&sug.completed.length>0) {
+        compHtml='<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">'
+          +'\u2713 Already had time for: '+sug.completed.map(function(t){return t.catIcon+' '+t.label;}).join(' \u00b7 ')
+          +'</div>';
+      }
+      var nextHtml='';
+      if (sug.next) {
+        nextHtml='<div style="font-size:11px;color:var(--muted);margin-top:4px">Next: '+sug.next.catIcon+' '+sug.next.label+' at '+sug.next.minMins+'m</div>';
+      }
+      h+='<div class="suggestion suggestion-contact">'
+        +'<div style="width:100%"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
+        +'<div class="suggestion-text"><div class="suggestion-label">'+sug.current.label+'</div>'
+        +'<div class="suggestion-detail">'+sug.current.detail+'</div></div>'
+        +'<div class="suggestion-badge '+sug.current.cls+'" style="flex-shrink:0">\uD83D\uDCF1 Now</div></div>'
+        +nextHtml+compHtml+'</div></div>';
+    } else {
+      var slbl,sdet,scls;
+      if(elapsed>=60){slbl='Study + chore';sdet='Long enough for both';scls='badge-study';}
+      else if(elapsed>=45){slbl='Study now';sdet='Good window for a full lesson';scls='badge-study';}
+      else if(elapsed>=20){slbl=chore||'Free time';sdet=chore?"Good window for today's chore":'Rest or quick task';scls='badge-chore';}
+      else{slbl='Just started';sdet='Window building \u2014 check back soon';scls='badge-short';}
+      h+='<div class="suggestion suggestion-free">'
+        +'<div class="suggestion-text"><div class="suggestion-label">'+slbl+'</div>'
+        +'<div class="suggestion-detail">'+sdet+'</div></div>'
+        +'<div class="suggestion-badge '+scls+'">\uD83D\uDECC Free</div>'
+        +'</div>';
+    }
+  } else {
+    var ww=getWakeWindowMins();
+    if (ww!==null&&ww>0) {
+      var pct=ww/avgWW;
+      var wcls=pct>=0.9?'wake-red':pct>=0.7?'wake-amber':'wake-ok';
+      var whint=pct>=0.9?'\u26a0\ufe0f Nap likely very soon':pct>=0.7?'\uD83D\uDD14 Nap window approaching':'Awake since last nap';
+      h+='<div class="wake-card '+wcls+'">'
+        +'<div class="wake-left"><div class="wake-eyebrow">Awake</div>'
+        +'<div class="wake-time">'+fmtDur(ww)+'</div>'
+        +'<div class="wake-hint">'+whint+'</div></div>'
+        +'<div class="wake-avg">Avg<br>window<br><strong>'+fmtDur(avgWW)+'</strong></div>'
+        +'</div>';
+    }
+    if (!isWindDown) {
+      h+='<div class="nap-btns">'
+        +'<button class="nap-btn nap-btn-contact" onclick="quickNap(\'contact\')">'
+        +'<span class="nap-btn-icon">\uD83D\uDCF1</span>'
+        +'<span class="nap-btn-title contact-col">Contact nap</span>'
+        +'<span class="nap-btn-sub contact-col">Phone tasks only</span>'
+        +'</button>'
+        +'<button class="nap-btn nap-btn-cot" onclick="quickNap(\'cot\')">'
+        +'<span class="nap-btn-icon">\uD83D\uDECC</span>'
+        +'<span class="nap-btn-title cot-col">Cot / Pram</span>'
+        +'<span class="nap-btn-sub cot-col">Fully free</span>'
+        +'</button>'
+        +'</div>';
+    }
+  }
+
+  var choreDone=state.choreDone&&state.choreDoneDate===todayKey();
+  h+='<div class="chore-card '+(choreDone?'chore-done':'')+'">'
+    +'<div class="chore-left"><div class="chore-eyebrow">Today\'s chore</div>'
+    +'<div class="chore-name">'+(chore||'\uD83D\uDE0C Rest day')+'</div>'
+    +'<div class="chore-hint">'+(chore?'Carrier \u00b7 playpen \u00b7 nap window':'No chore today')+'</div></div>'
+    +'<button class="chore-tick '+(choreDone?'done':'')+'" onclick="toggleChoreDone()">'+(choreDone?'\u2713':'')+'</button>'
+    +'</div>';
+
+  h+='<div class="sleep-strip">'
+    +'<div class="sleep-stat"><div class="sleep-num" style="color:var(--purple)">'+(napTotal>0?fmtDur(napTotal):'\u2014')+'</div><div class="sleep-lbl">Naps</div></div>'
+    +'<div class="sleep-stat"><div class="sleep-num" style="color:var(--accent)">'+(overnight?fmtDur(overnight):'\u2014')+'</div><div class="sleep-lbl">Night</div></div>'
+    +'<div class="sleep-stat"><div class="sleep-num" style="color:var(--teal)">'+(totalSleep>0?fmtDur(totalSleep):'\u2014')+'</div><div class="sleep-lbl">Total</div></div>'
+    +'</div>';
+
+  h+='<div class="card"><div class="card-label">Times</div>'
+    +'<div style="display:flex;gap:10px">'
+    +'<div style="flex:1"><div style="font-size:11px;color:var(--amber);font-weight:600;margin-bottom:4px">\uD83C\uDF05 WOKE</div>'
+    +'<input type="time" class="field-input" style="margin:0;color:'+(state.wakeTime?'var(--amber)':'var(--muted)')+'" '+(state.wakeTime?'value="'+state.wakeTime+'"':'')+' onchange="setWake(this.value)"></div>'
+    +'<div style="flex:1"><div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:4px">\uD83C\uDF19 BED</div>'
+    +'<input type="time" class="field-input" style="margin:0;color:'+(state.bedTime?'var(--accent)':'var(--muted)')+'" '+(state.bedTime?'value="'+state.bedTime+'"':'')+' onchange="setBed(this.value)"></div>'
+    +'</div></div>';
+
+  if (naps.length>0) {
+    h+='<div class="card"><div class="card-label">Today\'s naps</div>';
+    naps.forEach(function(n,i){
+      var d=durMins(n.start,n.end);
+      h+='<div class="nap-item">'
+        +'<div class="nap-dot dot-'+n.type+'"></div>'
+        +'<div class="nap-time">'+fmtTime(n.start)+' \u2192 '+(n.end?fmtTime(n.end):'...')+'</div>'
+        +(d>0?'<div class="nap-dur">'+fmtDur(d)+'</div>':'')
+        +'<div class="nap-type">'+n.type+'</div>'
+        +'<button class="icon-btn" style="color:var(--accent)" onclick="editNap(\''+todayKey()+'\','+i+')">\u270e</button>'
+        +'<button class="icon-btn" style="color:var(--muted)" onclick="deleteNap(\''+todayKey()+'\','+i+')">\xd7</button>'
+        +'</div>';
+    });
+    h+='</div>';
+  }
+
+  document.getElementById('tab-content').innerHTML=h;
+}
+
+function renderPatterns() {
+  var allDays=Object.entries(state.days).sort(function(a,b){return b[0].localeCompare(a[0]);});
+  var el=document.getElementById('tab-content');
+  if (allDays.length<2){el.innerHTML='<div class="empty">Log at least 2 days<br>to see patterns emerge.</div>';return;}
+  var allNaps=allDays.reduce(function(a,b){return a.concat(b[1]);},[]);
+  var done=allNaps.filter(function(n){return n.start&&n.end;});
+  var avgDur=done.length>0?Math.round(done.reduce(function(a,n){return a+durMins(n.start,n.end);},0)/done.length):0;
+  var avgPerDay=(allNaps.length/allDays.length).toFixed(1);
+  var contactPct=allNaps.length>0?Math.round(allNaps.filter(function(n){return n.type==='contact';}).length/allNaps.length*100):0;
+  var avgWW=getAvgWakeWindow();
+  var h='';
+  h+='<div class="pattern-card"><div class="pattern-title">'+allDays.length+'-day summary</div>'
+    +'<div class="pattern-row"><span class="p-key">Avg naps per day</span><span class="p-val">'+avgPerDay+'</span></div>'
+    +'<div class="pattern-row"><span class="p-key">Avg nap length</span><span class="p-val">'+fmtDur(avgDur)+'</span></div>'
+    +'<div class="pattern-row"><span class="p-key">Avg wake window</span><span class="p-val">'+fmtDur(avgWW)+'</span></div>'
+    +'<div class="pattern-row"><span class="p-key">Contact naps</span><span class="p-val">'+contactPct+'%</span></div>'
+    +'</div>';
+  h+='<div class="section-toggle" onclick="patternsExpanded=!patternsExpanded;renderPatterns()">'
+    +'<span class="section-toggle-label">Day by day ('+allDays.length+' days)</span>'
+    +'<span class="section-toggle-chevron">'+(patternsExpanded?'\u25b2 Hide':'\u25bc Show')+'</span></div>';
+  if (patternsExpanded) {
+    allDays.forEach(function(entry){
+      var date=entry[0], naps=entry[1];
+      var sorted=naps.slice().sort(function(a,b){return a.start.localeCompare(b.start);});
+      var total=sorted.reduce(function(a,n){return a+durMins(n.start,n.end);},0);
+      var d=new Date(date);
+      h+='<div class="history-day" style="margin-bottom:6px">'
+        +'<div class="history-day-header"><div>'
+        +'<div class="history-day-title">'+d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+'</div>'
+        +'<div class="history-day-meta">'+sorted.length+' nap'+(sorted.length!==1?'s':'')+' \u00b7 '+fmtDur(total)+'</div>'
+        +'</div></div><div class="history-day-body open" style="padding:0 14px 12px">';
+      sorted.forEach(function(n){
+        h+='<div class="history-nap"><div style="width:8px;height:8px;border-radius:50%;background:'+typeColor(n.type)+';flex-shrink:0"></div>'
+          +'<span>'+fmtTime(n.start)+(n.end?' \u2192 '+fmtTime(n.end):'')+'</span>'
+          +(durMins(n.start,n.end)>0?'<span style="color:var(--accent)">'+fmtDur(durMins(n.start,n.end))+'</span>':'')
+          +'<span style="color:var(--muted)">'+n.type+'</span></div>';
+      });
+      h+='</div></div>';
+    });
+  }
+  el.innerHTML=h;
+}
+
+function renderHistory() {
+  var allDays=Object.entries(state.days).sort(function(a,b){return b[0].localeCompare(a[0]);});
+  var el=document.getElementById('tab-content');
+  if (!allDays.length){el.innerHTML='<div class="empty">No history yet.<br>Start logging today!</div>';return;}
+  var h='';
+  allDays.forEach(function(entry){
+    var date=entry[0], naps=entry[1];
+    var sorted=naps.slice().sort(function(a,b){return a.start.localeCompare(b.start);});
+    var total=sorted.reduce(function(a,n){return a+durMins(n.start,n.end);},0);
+    var d=new Date(date);
+    var isToday=date===todayKey();
+    var isOpen=isToday||!!expandedDays[date];
+    h+='<div class="history-day">'
+      +'<div class="history-day-header" onclick="toggleDay(\''+date+'\')">'
+      +'<div><div class="history-day-title">'+(isToday?'Today':d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'}))+'</div>'
+      +'<div class="history-day-meta">'+sorted.length+' nap'+(sorted.length!==1?'s':'')+' \u00b7 '+fmtDur(total)+'</div></div>'
+      +'<span class="history-day-chevron">'+(isOpen?'\u25b2':'\u25bc')+'</span></div>'
+      +'<div class="history-day-body '+(isOpen?'open':'')+'">'
+      +'<div class="day-bar">';
+    sorted.forEach(function(n){
+      if(!n.end)return;
+      var sp=n.start.split(':').map(Number);
+      var s=Math.max(0,((sp[0]*60+sp[1])-7*60)/780*100);
+      var w=Math.min(100-s,durMins(n.start,n.end)/780*100);
+      h+='<div class="bar-seg" style="left:'+s+'%;width:'+w+'%;background:'+({contact:'#b09fec',cot:'#5ecfb0',pram:'#f0b96b'}[n.type]||'#888')+'"></div>';
+    });
+    h+='</div>';
+    sorted.forEach(function(n,i){
+      var d2=durMins(n.start,n.end);
+      h+='<div class="history-nap">'
+        +'<div style="width:8px;height:8px;border-radius:50%;background:'+typeColor(n.type)+';flex-shrink:0"></div>'
+        +'<span>'+fmtTime(n.start)+(n.end?' \u2192 '+fmtTime(n.end):' (ongoing)')+'</span>'
+        +(d2>0?'<span style="color:var(--accent)">'+fmtDur(d2)+'</span>':'')
+        +'<span style="color:var(--muted)">'+n.type+'</span>'
+        +'<div style="display:flex;gap:4px;margin-left:auto">'
+        +'<button class="inline-btn inline-btn-blue" onclick="editNap(\''+date+'\','+i+')">\u270e</button>'
+        +'<button class="inline-btn inline-btn-red" onclick="deleteNap(\''+date+'\','+i+')">\xd7</button>'
+        +'</div></div>';
+    });
+    h+='</div></div>';
+  });
+  el.innerHTML=h;
+}
+
+function renderSettings() {
+  var cfg=state.choreConfig, ct=state.contactTasks;
+  var napCount=Object.values(state.days).reduce(function(a,n){return a+n.length;},0);
+  var dayCount=Object.keys(state.days).length;
+  var dayOpts=DAY_NAMES.map(function(d,i){return '<option value="'+i+'" '+(cfg.binDay===i?'selected':'')+'>'+d+'</option>';}).join('');
+  var shopOpts=DAY_NAMES.map(function(d,i){return '<option value="'+i+'" '+(cfg.shoppingDay===i?'selected':'')+'>'+d+'</option>';}).join('');
+  var restOpts='<option value="null" '+(cfg.restDay===null||cfg.restDay===undefined?'selected':'')+'>No rest day</option>'
+    +DAY_NAMES.map(function(d,i){return '<option value="'+i+'" '+(cfg.restDay===i?'selected':'')+'>'+d+'</option>';}).join('');
+
+  function grp(id,title,content){
+    var open=!!expandedSettings[id];
+    return '<div class="settings-group">'
+      +'<div class="settings-group-header" onclick="toggleSettingsGroup(\''+id+'\')">'
+      +'<span class="settings-group-title">'+title+'</span>'
+      +'<span style="font-size:12px;color:var(--accent)">'+(open?'\u25b2':'\u25bc')+'</span></div>'
+      +'<div class="settings-group-body '+(open?'open':'')+'">'+(open?content:'')+'</div></div>';
+  }
+
+  var bp=state.babyProfile||defaultState().babyProfile;
+  var sc=state.safetyCheck||defaultState().safetyCheck;
+
+  var babyContent='<div class="settings-row">'
+    +'<div><div class="settings-row-label">Baby\'s name</div><div class="settings-row-sub">Used in personalised messages</div></div>'
+    +'<input type="text" value="'+(bp.name||'')+'" placeholder="e.g. Aria" onblur="saveBabyProfile(\'name\',this.value)"'
+    +' style="background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:\'Inter\',sans-serif;font-size:14px;padding:7px 10px;width:110px;outline:none;text-align:right">'
+    +'</div>'
+    +'<div class="settings-row" style="border-bottom:none">'
+    +'<div><div class="settings-row-label">Gender</div><div class="settings-row-sub">Used in night messages</div></div>'
+    +'<div style="display:flex;gap:6px">'
+    +['girl','boy','unset'].map(function(g){
+      var active=bp.gender===g||(g==='unset'&&!bp.gender);
+      return '<button onclick="saveBabyProfile(\'gender\',\''+g+'\')" style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'#1a2a3a':'var(--card2)')+';color:'+(active?'var(--accent)':'var(--muted)')+';font-family:\'Inter\',sans-serif">'+(g==='girl'?'Girl':g==='boy'?'Boy':'\u2013')+'</button>';
+    }).join('')+'</div></div>';
+
+  var choreContent='<div class="settings-row"><div><div class="settings-row-label">Bin day</div></div>'
+    +'<select class="select-input" style="width:auto;min-width:110px" onchange="saveChoreCfg(\'binDay\',this.value)">'+dayOpts+'</select></div>'
+    +'<div class="settings-row"><div><div class="settings-row-label">Shopping day</div></div>'
+    +'<select class="select-input" style="width:auto;min-width:110px" onchange="saveChoreCfg(\'shoppingDay\',this.value)">'+shopOpts+'</select></div>'
+    +'<div class="settings-row"><div><div class="settings-row-label">Rest day</div></div>'
+    +'<select class="select-input" style="width:auto;min-width:110px" onchange="saveChoreCfg(\'restDay\',this.value)">'+restOpts+'</select></div>';
+
+  var taskContent=ct.categories.map(function(cat,ci){
+    return '<div style="border-bottom:1px solid var(--border)">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px">'
+      +'<div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">'+cat.icon+'</span><span style="font-size:14px;font-weight:600">'+cat.label+'</span></div>'
+      +'<div class="toggle-switch '+(cat.active?'on':'off')+'" onclick="toggleCat('+ci+')"><div class="toggle-knob"></div></div>'
+      +'</div>'
+      +(cat.active?cat.tasks.map(function(t,ti){
+        return '<div class="task-row"><span class="task-rank">'+(ti+1)+'</span><span class="task-label">'+t.label+'</span><span class="task-mins">'+t.minMins+'m+</span></div>';
+      }).join(''):'')
+      +'</div>';
+  }).join('');
+
+  var dataContent='<div class="settings-row"><div class="settings-row-label">Days logged</div><span class="settings-row-val">'+dayCount+'</span></div>'
+    +'<div class="settings-row"><div class="settings-row-label">Total naps</div><span class="settings-row-val">'+napCount+'</span></div>'
+    +'<div style="padding:12px 14px;border-top:1px solid var(--border)">'
+    +'<div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">Export \u2014 copy before any update</div>'
+    +'<textarea class="export-box" readonly onclick="this.select()">'+JSON.stringify(state)+'</textarea>'
+    +'<button class="btn-primary" onclick="copyExport()">\uD83D\uDCCB Copy to clipboard</button>'
+    +'<div id="copy-ok" style="text-align:center;font-size:13px;color:var(--teal);margin-top:6px;display:none">\u2713 Copied!</div>'
+    +'</div>'
+    +'<div style="padding:12px 14px;border-top:1px solid var(--border)">'
+    +'<div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">Import \u2014 restore after update</div>'
+    +'<textarea id="import-box" class="export-box" placeholder="Paste exported data here..."></textarea>'
+    +'<button class="btn-secondary" onclick="importData()">\uD83D\uDCE5 Restore data</button>'
+    +'<div id="import-ok" style="text-align:center;font-size:13px;color:var(--teal);margin-top:6px;display:none"></div>'
+    +'<div id="import-err" style="text-align:center;font-size:13px;color:var(--red);margin-top:6px;display:none"></div>'
+    +'</div>';
+
+  var safetyContent='<div class="settings-row">'
+    +'<div><div class="settings-row-label">Cot nap check-ins</div><div class="settings-row-sub">Reminder when baby is in cot</div></div>'
+    +'<div class="toggle-switch '+(sc.cotEnabled?'on':'off')+'" onclick="toggleSafety(\'cotEnabled\')"><div class="toggle-knob"></div></div>'
+    +'</div>'
+    +'<div class="settings-row">'
+    +'<div><div class="settings-row-label">Pram nap reminders</div><div class="settings-row-sub">Reminder to stay nearby</div></div>'
+    +'<div class="toggle-switch '+(sc.pramEnabled?'on':'off')+'" onclick="toggleSafety(\'pramEnabled\')"><div class="toggle-knob"></div></div>'
+    +'</div>'
+    +'<div class="settings-row" style="border-bottom:none">'
+    +'<div><div class="settings-row-label">Check-in interval</div></div>'
+    +'<select class="select-input" style="width:auto;min-width:120px" onchange="setSafetyInterval(this.value)">'
+    +'<option value="20" '+(sc.intervalMins===20?'selected':'')+'>Every 20 mins</option>'
+    +'<option value="30" '+(sc.intervalMins===30||!sc.intervalMins?'selected':'')+'>Every 30 mins</option>'
+    +'<option value="45" '+(sc.intervalMins===45?'selected':'')+'>Every 45 mins</option>'
+    +'<option value="60" '+(sc.intervalMins===60?'selected':'')+'>Every 60 mins</option>'
+    +'</select></div>';
+
+  document.getElementById('tab-content').innerHTML=
+    grp('baby','Baby profile',babyContent)
+    +grp('chores','Chore schedule',choreContent)
+    +grp('contact-tasks','Contact nap tasks',taskContent)
+    +grp('safety','Safety checks',safetyContent)
+    +grp('data','Data',dataContent)
+    +'<div class="version-note">v2.1.0</div>';
+}
+
+function quickNap(type){
+  var key=todayKey();
+  if(!state.days[key])state.days[key]=[];
+  state.days[key].push({start:nowStr(),end:'',type:type});
+  saveState();toast(type==='contact'?'Contact nap started':'Cot / Pram nap started');render();
+}
+
+function endOngoingNap(){
+  var key=todayKey();
+  var naps=state.days[key]||[], on=null;
+  for(var i=0;i<naps.length;i++){if(naps[i].start&&!naps[i].end){on=naps[i];break;}}
+  if(on){on.end=nowStr();saveState();toast('Nap ended \u00b7 '+fmtDur(durMins(on.start,on.end)));render();}
+}
+
+function setWake(v){state.wakeTime=v;state.wakeDate=todayKey();saveState();toast('Wake time saved');render();}
+function setBed(v){state.bedTime=v;state.bedDate=todayKey();saveState();toast('Bedtime saved');render();}
+
+function toggleChoreDone(){
+  state.choreDone=!state.choreDone;state.choreDoneDate=todayKey();
+  saveState();toast(state.choreDone?'Chore done!':'Chore unmarked');render();
+}
+
+function deleteNap(dateKey,index){
+  if(!state.days[dateKey])return;
+  state.days[dateKey].splice(index,1);
+  if(!state.days[dateKey].length)delete state.days[dateKey];
+  saveState();toast('Nap deleted');render();
+}
+
+function toggleDay(date){
+  expandedDays[date]=!expandedDays[date];renderHistory();
+}
+
+function toggleSettingsGroup(id){
+  expandedSettings[id]=!expandedSettings[id];renderSettings();
+}
+
+function openForm(){
+  formEditingNap=null;formSelectedType='contact';
+  document.getElementById('f-date').value=todayKey();
+  document.getElementById('f-start').value=nowStr();
+  document.getElementById('f-end').value='';
+  document.getElementById('form-title').textContent='Log nap';
+  document.getElementById('form-save-btn').textContent='Save nap';
+  updateTypePills();
+  document.getElementById('form-overlay').classList.add('open');
+}
+
+function editNap(dateKey,index){
+  var nap=state.days[dateKey]&&state.days[dateKey][index];
+  if(!nap)return;
+  formEditingNap={dateKey:dateKey,index:index};formSelectedType=nap.type||'contact';
+  document.getElementById('f-date').value=dateKey;
+  document.getElementById('f-start').value=nap.start||'';
+  document.getElementById('f-end').value=nap.end||'';
+  document.getElementById('form-title').textContent='Edit nap';
+  document.getElementById('form-save-btn').textContent='Update nap';
+  updateTypePills();
+  document.getElementById('form-overlay').classList.add('open');
+}
+
+function closeForm(){document.getElementById('form-overlay').classList.remove('open');}
+function handleOverlayClick(e){if(e.target===document.getElementById('form-overlay'))closeForm();}
+
+function selType(t){formSelectedType=t;updateTypePills();}
+function updateTypePills(){
+  var types=['contact','cot'];
+  document.querySelectorAll('.type-pill').forEach(function(p,i){
+    p.className='type-pill'+(formSelectedType===types[i]?' sel-'+types[i]:'');
+  });
+}
+
+function saveForm(){
+  var start=document.getElementById('f-start').value;
+  var end=document.getElementById('f-end').value;
+  var date=document.getElementById('f-date').value;
+  if(!start||!date){toast('Please fill in start time');return;}
+  if(formEditingNap){
+    state.days[formEditingNap.dateKey][formEditingNap.index]={start:start,end:end||'',type:formSelectedType};
+    toast('Nap updated');
+  } else {
+    if(!state.days[date])state.days[date]=[];
+    state.days[date].push({start:start,end:end||'',type:formSelectedType});
+    toast('Nap saved');
+  }
+  saveState();closeForm();render();
+}
+
+function saveChoreCfg(field,val){
+  state.choreConfig[field]=val==='null'?null:parseInt(val);
+  saveState();renderSettings();
+}
+
+function toggleCat(ci){state.contactTasks.categories[ci].active=!state.contactTasks.categories[ci].active;saveState();renderSettings();}
+
+function saveBabyProfile(field,value){
+  if(!state.babyProfile)state.babyProfile={name:null,gender:null};
+  if(field==='gender')state.babyProfile.gender=value==='unset'?null:value;
+  else state.babyProfile[field]=value.trim()||null;
+  saveState();renderSettings();
+}
+
+function toggleSafety(field){
+  if(!state.safetyCheck)state.safetyCheck=defaultState().safetyCheck;
+  state.safetyCheck[field]=!state.safetyCheck[field];
+  saveState();renderSettings();
+}
+
+function setSafetyInterval(val){
+  if(!state.safetyCheck)state.safetyCheck=defaultState().safetyCheck;
+  state.safetyCheck.intervalMins=parseInt(val);
+  lastSafetyCheckMins=0;saveState();renderSettings();
+}
+
+function copyExport(){
+  var box=document.querySelector('.export-box[readonly]');
+  if(!box)return;box.select();
+  try{navigator.clipboard.writeText(box.value).catch(function(){document.execCommand('copy');});}catch(e){document.execCommand('copy');}
+  var ok=document.getElementById('copy-ok');
+  if(ok){ok.style.display='block';setTimeout(function(){ok.style.display='none';},2500);}
+}
+
+function importData(){
+  var ib=document.getElementById('import-box');
+  var raw=ib?ib.value.trim():'';
+  var ok=document.getElementById('import-ok'),err=document.getElementById('import-err');
+  if(ok)ok.style.display='none';if(err)err.style.display='none';
+  if(!raw){if(err){err.textContent='Paste your export first';err.style.display='block';}return;}
+  try{
+    var parsed=JSON.parse(raw);
+    if(!parsed.days)throw new Error();
+    var nc=Object.values(parsed.days).reduce(function(a,n){return a+n.length;},0);
+    var dc=Object.keys(parsed.days).length;
+    state=parsed;saveState();
+    if(ok){ok.textContent='Restored '+nc+' naps across '+dc+' days';ok.style.display='block';}
+    setTimeout(function(){render();},1500);
+  }catch(e){if(err){err.textContent="Couldn't read that data";err.style.display='block';}}
+}
+
+function checkSafetyAlert(ongoing){
+  if(!ongoing||ongoing.type==='contact'){lastSafetyCheckMins=0;return;}
+  var sc=state.safetyCheck||defaultState().safetyCheck;
+  if(ongoing.type==='cot'&&!sc.cotEnabled)return;
+  if(ongoing.type==='pram'&&!sc.pramEnabled)return;
+  var elapsed=durMins(ongoing.start,nowStr());
+  var interval=sc.intervalMins||30;
+  var threshold=Math.floor(elapsed/interval)*interval;
+  if(threshold>0&&threshold!==lastSafetyCheckMins&&elapsed>=threshold&&elapsed<threshold+2){
+    lastSafetyCheckMins=threshold;
+    var msg=ongoing.type==='pram'?(sc.pramMessage||'Baby in pram \u2014 stay nearby. {mins} mins into this nap.'):(sc.cotMessage||'Quick check \u2014 baby in cot for {mins} mins.');
+    var el=document.getElementById('safety-toast');
+    if(el){el.textContent=msg.replace('{mins}',elapsed);el.classList.add('show');setTimeout(function(){el.classList.remove('show');},6000);}
+  }
+}
+
+render();
+setInterval(function(){
+  if(currentTab==='today'){
+    render();
+    var naps=getTodayNaps();
+    var ongoing=naps.find(function(n){return n.start&&!n.end;});
+    checkSafetyAlert(ongoing);
+  }
+},60000);
+</script>
+</body>
+</html>
