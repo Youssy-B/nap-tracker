@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Pilot Feedback · Nap Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0f1117;
+    --surface:  #171b24;
+    --card:     #1e2330;
+    --border:   #2a3040;
+    --teal:     #4ecdc4;
+    --amber:    #ffd166;
+    --purple:   #a78bfa;
+    --text:     #f0f2f8;
+    --muted:    #7a8599;
+    --subtle:   #3a4255;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  /* ── Header ─────────────────────────────────────── */
+  .hero {
+    background: linear-gradient(160deg, #141828 0%, #0f1117 60%);
+    padding: 48px 24px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(78,205,196,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--teal);
+    background: rgba(78,205,196,0.1);
+    border: 1px solid rgba(78,205,196,0.2);
+    padding: 5px 12px;
+    border-radius: 20px;
+    margin-bottom: 18px;
+  }
+
+  .hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 36px;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--teal);
+  }
+
+  .hero p {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 340px;
+  }
+
+  /* ── Progress bar ───────────────────────────────── */
+  .progress-wrap {
+    padding: 0 24px;
+    margin-top: -1px;
+    background: var(--bg);
+    padding-top: 24px;
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .progress-bar {
+    height: 3px;
+    background: var(--subtle);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--teal);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+
+  /* ── Sections ───────────────────────────────────── */
+  .section {
+    padding: 0 24px;
+    margin-top: 36px;
+    display: none;
+    animation: fadeUp 0.35s ease;
+  }
+
+  .section.active { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 6px;
+  }
+
+  .section-title {
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+
+  .section-sub {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  /* ── Question card ──────────────────────────────── */
+  .q-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 16px;
+    margin-bottom: 12px;
+  }
+
+  .q-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  .q-label span {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    background: var(--subtle);
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--teal);
+    text-align: center;
+    line-height: 22px;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  /* ── Scale / emoji row ──────────────────────────── */
+  .scale-row {
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+  }
+
+  .scale-btn {
+    flex: 1;
+    padding: 10px 4px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--muted);
+    font-size: 22px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .scale-btn .scale-num {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .scale-btn:active { transform: scale(0.95); }
+  .scale-btn.selected {
+    border-color: var(--teal);
+    background: rgba(78,205,196,0.1);
+  }
+  .scale-btn.selected .scale-num { color: var(--teal); }
+
+  /* ── Yes/No pills ───────────────────────────────── */
+  .yn-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .yn-btn {
+    flex: 1;
+    padding: 12px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .yn-btn:active { transform: scale(0.97); }
+  .yn-btn.selected-yes {
+    border-color: var(--teal);
+    background: rgba(78,205,196,0.1);
+    color: var(--teal);
+  }
+  .yn-btn.selected-no {
+    border-color: var(--amber);
+    background: rgba(255,209,102,0.08);
+    color: var(--amber);
+  }
+
+  /* ── Multi select ───────────────────────────────── */
+  .multi-wrap { display: flex; flex-direction: column; gap: 8px; }
+
+  .multi-btn {
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .multi-btn::before {
+    content: '';
+    width: 18px; height: 18px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+
+  .multi-btn.selected {
+    border-color: var(--teal);
+    background: rgba(78,205,196,0.08);
+    color: var(--text);
+  }
+
+  .multi-btn.selected::before {
+    background: var(--teal);
+    border-color: var(--teal);
+    content: '✓';
+    color: #0f1117;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Single select ──────────────────────────────── */
+  .single-wrap { display: flex; flex-direction: column; gap: 8px; }
+
+  .single-btn {
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .single-btn::before {
+    content: '';
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+
+  .single-btn.selected {
+    border-color: var(--teal);
+    background: rgba(78,205,196,0.08);
+    color: var(--text);
+  }
+
+  .single-btn.selected::before {
+    background: var(--teal);
+    border-color: var(--teal);
+  }
+
+  /* ── Name poll cards ────────────────────────────── */
+  .name-grid { display: flex; flex-direction: column; gap: 10px; }
+
+  .name-card {
+    padding: 18px 16px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .name-card:active { transform: scale(0.98); }
+
+  .name-card.selected {
+    border-color: var(--teal);
+    background: rgba(78,205,196,0.08);
+  }
+
+  .name-title {
+    font-family: 'Fraunces', serif;
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+
+  .name-card.selected .name-title { color: var(--teal); }
+
+  .name-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .name-card.selected .name-desc { color: var(--muted); }
+
+  .name-check {
+    display: none;
+    width: 24px; height: 24px;
+    background: var(--teal);
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #0f1117;
+    font-weight: 700;
+    float: right;
+    margin-top: -30px;
+  }
+
+  .name-card.selected .name-check { display: flex; }
+
+  /* ── Textarea ───────────────────────────────────── */
+  textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 14px;
+    resize: none;
+    outline: none;
+    line-height: 1.6;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  textarea:focus { border-color: var(--teal); }
+  textarea::placeholder { color: var(--subtle); }
+
+  /* ── Nav buttons ────────────────────────────────── */
+  .nav-row {
+    padding: 24px 24px 0;
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-back {
+    padding: 14px 20px;
+    background: transparent;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+
+  .btn-next {
+    flex: 1;
+    padding: 14px 20px;
+    background: var(--teal);
+    border: none;
+    border-radius: 14px;
+    color: #0f1117;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+    letter-spacing: 0.2px;
+  }
+
+  .btn-next:active { transform: scale(0.98); opacity: 0.9; }
+  .btn-next:disabled {
+    background: var(--subtle);
+    color: var(--muted);
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* ── Thank you screen ───────────────────────────── */
+  .thanks {
+    display: none;
+    padding: 48px 24px;
+    text-align: center;
+    animation: fadeUp 0.4s ease;
+  }
+
+  .thanks.active { display: block; }
+
+  .thanks-icon {
+    font-size: 56px;
+    margin-bottom: 20px;
+    display: block;
+  }
+
+  .thanks h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 30px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    line-height: 1.2;
+  }
+
+  .thanks p {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 300px;
+    margin: 0 auto 32px;
+  }
+
+  .thanks-summary {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: left;
+  }
+
+  .thanks-summary-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 14px;
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .summary-row:last-child { border-bottom: none; }
+  .summary-key { color: var(--muted); flex-shrink: 0; max-width: 140px; }
+  .summary-val { color: var(--text); font-weight: 500; text-align: right; }
+
+  /* ── Divider ────────────────────────────────────── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+
+  /* ── Step indicator ─────────────────────────────── */
+  .step-dots {
+    display: flex;
+    gap: 6px;
+    padding: 0 24px;
+    margin-top: 20px;
+  }
+
+  .step-dot {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--subtle);
+    flex: 1;
+    transition: background 0.3s;
+  }
+
+  .step-dot.done { background: var(--teal); }
+  .step-dot.active { background: rgba(78,205,196,0.5); }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-tag">🌙 Pilot</div>
+  <h1>Your feedback<br>shapes <em>everything</em></h1>
+  <p>5 minutes. No right answers. Just tell us what it's really like to use this as a parent.</p>
+</div>
+
+<!-- Step dots -->
+<div class="step-dots" id="stepDots"></div>
+
+<!-- Progress -->
+<div class="progress-wrap">
+  <div class="progress-label">
+    <span id="progressLabel">Section 1 of 5</span>
+    <span id="progressPct">0%</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ -->
+<!-- SECTION 1 — About you                            -->
+<!-- ══════════════════════════════════════════════════ -->
+<div class="section active" id="section-0">
+  <div class="section-eyebrow">Section 1 of 5</div>
+  <div class="section-title">About you</div>
+  <div class="section-sub">Quick context so we understand where you're coming from.</div>
+
+  <div class="q-card">
+    <div class="q-label"><span>1</span>How old is your baby?</div>
+    <div class="single-wrap" id="q-age">
+      <button class="single-btn" onclick="selectSingle('q-age', this, 'age')">0–3 months</button>
+      <button class="single-btn" onclick="selectSingle('q-age', this, 'age')">4–6 months</button>
+      <button class="single-btn" onclick="selectSingle('q-age', this, 'age')">7–12 months</button>
+      <button class="single-btn" onclick="selectSingle('q-age', this, 'age')">12–18 months</button>
+    </div>
+  </div>
+
+  <div class="q-card">
+    <div class="q-label"><span>2</span>How many days did you actively use the app?</div>
+    <div class="single-wrap" id="q-days">
+      <button class="single-btn" onclick="selectSingle('q-days', this, 'days_used')">1 day</button>
+      <button class="single-btn" onclick="selectSingle('q-days', this, 'days_used')">2–3 days</button>
+      <button class="single-btn" onclick="selectSingle('q-days', this, 'days_used')">Most days</button>
+      <button class="single-btn" onclick="selectSingle('q-days', this, 'days_used')">Every day</button>
+    </div>
+  </div>
+
+  <div class="q-card">
+    <div class="q-label"><span>3</span>Who else in your household used the app?</div>
+    <div class="single-wrap" id="q-users">
+      <button class="single-btn" onclick="selectSingle('q-users', this, 'household')">Just me</button>
+      <button class="single-btn" onclick="selectSingle('q-users', this, 'household')">Me and my partner</button>
+      <button class="single-btn" onclick="selectSingle('q-users', this, 'household')">Other caregiver too</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ -->
+<!-- SECTION 2 — Did it change behaviour?             -->
+<!-- ══════════════════════════════════════════════════ -->
+<div class="section" id="section-1">
+  <div class="section-eyebrow">Section 2 of 5</div>
+  <div class="section-title">Did it actually help?</div>
+  <div class="section-sub">We want to know if the app changed anything about your day.</div>
+
+  <div class="q-card">
+    <div class="q-label"><span>4</span>When a nap started, did you open the app to see what to do?</div>
+    <div class="yn-row" id="q-open">
+      <button class="yn-btn" onclick="selectYN('q-open', this, 'opened_on_nap', 'yes')">✓ Yes, usually</button>
+      <button class="yn-btn" onclick="selectYN('q-open', this, 'opened_on_nap', 'no')">✗ Not really</button>
+    </div>
+  </div>
+
+  <div class="q-card">
+    <div class="q-label"><span>5</span>Did the suggestion feel right for where you were in the nap window?</div>
+    <div class="scale-row" id="q-suggestion">
+      <button class="scale-btn" onclick="selectScale('q-suggestion', this, 'suggestion_fit', '1')">😕<span class="scale-num">1</span></button>
+      <button class="scale-btn" onclick="selectScale('q-suggestion', this, 'suggestion_fit', '2')">😐<span class="scale-num">2</span></button>
+      <button class="scale-btn" onclick="selectScale('q-suggestion', this, 'suggestion_fit', '3')">🙂<span class="scale-num">3</span></button>
+      <button class="scale-btn" onclick="selectScale('q-suggestion', this, 'suggestion_fit', '4')">😊<span class="scale-num">4</span></button>
+      <button class="scale-btn" onclick="selectScale('q-suggestion', this, 'suggestion_fit', '5')">🤩<span class="scale-num">5</span></button>
+    </div>
+  </div>
+
+  <div class="q-card">
+    <div class="q-label"><span>6</span>Did you complete the suggested task or goal activity?</div>
+    <div class="single-wrap" id="q-complete">
+      <button class="single-btn" onclick="selectSingle('q-complete', this, 'task_completed')">Yes, usually</button>
+      <button class="single-btn" onclick="selectSingle('q-complete', this, 'task_completed')">Sometimes</button>
+      <button class="single-btn" onclick="selectSingle('q-complete', this, 'task_completed')">Rarely</button>
+      <button class="single-btn" onclick="selectSingle('q-complete', this, 'task_completed')">Baby kept waking too soon</button>
+    </div>
+  </div>
+
+  <div class="q-card">
+    <div class="q-label"><span>7</span>Did the app make you feel more in control of your day — or more pressured?</div>
+    <div class="scale-row" id="q-feeling">
+      <button class="scale-btn" onclick="selectScale('q-feeling', this, 'feeling', '1')" title="More pressured">😰<span class="scale-num">Pressure</span></button>
+      <button class="scale-btn" onclick="selectScale('q-feeling', this, 'feeling', '2')">😕<span class="scale-num">2</span></button>
+      <button class="scale-btn" onclick="selectScale('q-feeling', this, 'feeling', '3')">😐<span class="scale-num">Neutral</span></button>
+      <button class="scale-btn" onclick="selectScale('q-feeling', this, 'feeling', '4')">😊<span class="scale-num">4</span></button>
+      <button class="scale-btn" onclick="selectScale('q-feeling', this, 'feeling', '5')" title="More in control">💪<span class="scale-num">Control</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ -->
+<!-- SECTION 3 — Friction points                      -->
+<!-- ══════════════════════════════════════════════════ -->
+<div class="section" id="section-2">
+  <div class="section-eyebrow">Section 3 of 5</div>
+  <div class="section-title">What got in the way?</div>
+  <div class="section-sub">Honest friction points help us most. No judgement.</div>
+
+  <div class="q-card">
+    <div class="q-label"><span>8</span>Was there anything you couldn't figure out without help?</div>
+    <div class="yn-row" id="q-confused">
+      <button class="yn-btn" onclick="selectYN('q-confused', this, 'was_confused', 'yes')">✓ Yes</button>
+      <button class="yn-btn" onclick="selectYN('q-confused', this, 'was_confused', 'no')">✗ No</button>
+    </div>
+  </div>
+
+  <div class="q-card">
+    <div class="q-label"><span>9</span>Select any moments of frustration (pick all that apply)</div>
+    <div class="multi-wrap" id="q-friction">
+      <button class="multi-btn" onclick="toggleMulti('q-friction', this, 'friction')">Logging a nap felt like too many taps</button>
+      <button class="multi-btn" onclick="toggleMulti('q-friction', this, 'friction')">Couldn't find a setting I was looking for</button>
+      <button class="multi-btn" onclick="toggleMulti('q-friction', this, 'friction')">The suggestion wasn't relevant to my situation</button>
+      <button class="multi-btn" onclick="toggleMulti('q-friction', this, 'friction')">Too much on screen at once</button>
+      <button class="multi-btn" onclick="toggleMulti('q-friction', this, 'friction')">App felt slow or unresponsive</button>
+      <button class="multi-btn" onclick="toggleMulti('q-friction', this, 'friction')">None — it felt smooth</button>
+    </div>
+  </div>
+
+  <div class="q-card">
+    <div class="q-label"><span>10</span>Did anything make you want to stop using it?</div>
+    <textarea rows="3" placeholder="e.g. data disappeared, too many steps, didn't fit our routine…" oninput="saveText('churn_reason', this.value)"></textarea>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ -->
+<!-- SECTION 4 — Emotional resonance + recommend      -->
+<!-- ══════════════════════════════════════════════════ -->
+<div class="section" id="section-3">
+  <div class="section-eyebrow">Section 4 of 5</div>
+  <div class="section-title">The honest stuff</div>
+  <div class="section-sub">This is the bit that helps us most.</div>
+
+  <div class="q-card">
+    <div class="q-label"><span>11</span>Did you open the app first thing in the morning, or only when a nap started?</div>
+    <div class="single-wrap" id="q-when">
+      <button class="single-btn" onclick="selectSingle('q-when', this, 'open_timing')">First thing — checked it daily</button>
+      <button class="single-btn" onclick="selectSingle('q-when', this, 'open_timing')">When a nap started</button>
+      <button class="single-btn" onclick="selectSingle('q-when', this, 'open_timing')">Only occasionally</button>
+      <button class="single-btn" onclick="selectSingle('q-when', this, 'open_timing')">Rarely opened it</button>
+    </div>
+  </div>
+
+  <div class="q-card">
+    <div class="q-label"><span>12</span>Overall, how would you rate the app?</div>
+    <div class="scale-row" id="q-rating">
+      <button class="scale-btn" onclick="selectScale('q-rating', this, 'overall_rating', '1')">⭐<span class="scale-num">1</span></button>
+      <button class="scale-btn" onclick="selectScale('q-rating', this, 'overall_rating', '2')">⭐⭐<span class="scale-num">2</span></button>
+      <button class="scale-btn" onclick="selectScale('q-rating', this, 'overall_rating', '3')">⭐⭐⭐<span class="scale-num">3</span></button>
+      <button class="scale-btn" onclick="selectScale('q-rating', this, 'overall_rating', '4')">⭐⭐⭐⭐<span class="scale-num">4</span></button>
+      <button class="scale-btn" onclick="selectScale('q-rating', this, 'overall_rating', '5')">⭐⭐⭐⭐⭐<span class="scale-num">5</span></button>
+    </div>
+  </div>
+
+  <div class="q-card">
+    <div class="q-label"><span>13</span>Would you recommend this to another parent?</div>
+    <div class="single-wrap" id="q-recommend">
+      <button class="single-btn" onclick="selectSingle('q-recommend', this, 'would_recommend')">Absolutely — already have</button>
+      <button class="single-btn" onclick="selectSingle('q-recommend', this, 'would_recommend')">Yes, once it improves a bit</button>
+      <button class="single-btn" onclick="selectSingle('q-recommend', this, 'would_recommend')">Not sure yet</button>
+      <button class="single-btn" onclick="selectSingle('q-recommend', this, 'would_recommend')">Probably not</button>
+    </div>
+  </div>
+
+  <div class="q-card">
+    <div class="q-label"><span>14</span>What's the one thing we should change or add?</div>
+    <textarea rows="4" placeholder="Be brutal — this is exactly what we need to hear…" oninput="saveText('one_change', this.value)"></textarea>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ -->
+<!-- SECTION 5 — Name poll                            -->
+<!-- ══════════════════════════════════════════════════ -->
+<div class="section" id="section-4">
+  <div class="section-eyebrow">Section 5 of 5</div>
+  <div class="section-title">One last thing</div>
+  <div class="section-sub">We're deciding on a name. Which of these would you most want on your home screen?</div>
+
+  <div class="name-grid" id="q-name">
+    <div class="name-card" onclick="selectName(this, 'Pockettime')">
+      <div class="name-check">✓</div>
+      <div class="name-title">Pockettime</div>
+      <div class="name-desc">A pocket of time, stolen between naps. Every parent knows this feeling.</div>
+    </div>
+    <div class="name-card" onclick="selectName(this, 'Napwise')">
+      <div class="name-check">✓</div>
+      <div class="name-title">Napwise</div>
+      <div class="name-desc">Smart decisions made during the small windows you get.</div>
+    </div>
+    <div class="name-card" onclick="selectName(this, 'Windo')">
+      <div class="name-check">✓</div>
+      <div class="name-title">Windo</div>
+      <div class="name-desc">Your window. The moment the baby goes down and the world opens up.</div>
+    </div>
+  </div>
+
+  <div class="q-card" style="margin-top:12px">
+    <div class="q-label"><span>💬</span>What does your chosen name make you feel? (optional)</div>
+    <textarea rows="3" placeholder="First impression, gut reaction, anything…" oninput="saveText('name_feeling', this.value)"></textarea>
+  </div>
+</div>
+
+<!-- Nav -->
+<div class="nav-row" id="navRow">
+  <button class="btn-back" id="btnBack" onclick="goBack()" style="display:none">←</button>
+  <button class="btn-next" id="btnNext" onclick="goNext()">Next →</button>
+</div>
+
+<!-- Thank you -->
+<div class="thanks" id="thanks">
+  <span class="thanks-icon">🌙</span>
+  <h2>Thank you so much.</h2>
+  <p>Your feedback goes directly into making this better for every exhausted parent who tries it next.</p>
+
+  <div class="thanks-summary">
+    <div class="thanks-summary-title">Your responses at a glance</div>
+    <div id="summaryRows"></div>
+  </div>
+</div>
+
+<script>
+  var answers = {};
+  var currentSection = 0;
+  var totalSections = 5;
+
+  // ── Init ────────────────────────────────────────────
+  function init() {
+    buildDots();
+    updateProgress();
+  }
+
+  function buildDots() {
+    var wrap = document.getElementById('stepDots');
+    wrap.innerHTML = '';
+    for (var i = 0; i < totalSections; i++) {
+      var d = document.createElement('div');
+      d.className = 'step-dot' + (i === currentSection ? ' active' : i < currentSection ? ' done' : '');
+      wrap.appendChild(d);
+    }
+  }
+
+  function updateProgress() {
+    var pct = Math.round((currentSection / totalSections) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressPct').textContent = pct + '%';
+    document.getElementById('progressLabel').textContent = 'Section ' + (currentSection + 1) + ' of ' + totalSections;
+    buildDots();
+
+    var back = document.getElementById('btnBack');
+    back.style.display = currentSection > 0 ? 'block' : 'none';
+
+    var next = document.getElementById('btnNext');
+    next.textContent = currentSection === totalSections - 1 ? 'Submit feedback ✓' : 'Next →';
+  }
+
+  // ── Navigation ──────────────────────────────────────
+  function goNext() {
+    if (currentSection < totalSections - 1) {
+      document.getElementById('section-' + currentSection).classList.remove('active');
+      currentSection++;
+      document.getElementById('section-' + currentSection).classList.add('active');
+      updateProgress();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      submitForm();
+    }
+  }
+
+  function goBack() {
+    if (currentSection > 0) {
+      document.getElementById('section-' + currentSection).classList.remove('active');
+      currentSection--;
+      document.getElementById('section-' + currentSection).classList.add('active');
+      updateProgress();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  // ── Input handlers ──────────────────────────────────
+  function selectSingle(groupId, el, key) {
+    var group = document.getElementById(groupId);
+    group.querySelectorAll('.single-btn').forEach(function(b) { b.classList.remove('selected'); });
+    el.classList.add('selected');
+    answers[key] = el.textContent.trim();
+  }
+
+  function selectYN(groupId, el, key, val) {
+    var group = document.getElementById(groupId);
+    group.querySelectorAll('.yn-btn').forEach(function(b) {
+      b.classList.remove('selected-yes', 'selected-no');
+    });
+    el.classList.add(val === 'yes' ? 'selected-yes' : 'selected-no');
+    answers[key] = val;
+  }
+
+  function selectScale(groupId, el, key, val) {
+    var group = document.getElementById(groupId);
+    group.querySelectorAll('.scale-btn').forEach(function(b) { b.classList.remove('selected'); });
+    el.classList.add('selected');
+    answers[key] = val;
+  }
+
+  function toggleMulti(groupId, el, key) {
+    el.classList.toggle('selected');
+    var group = document.getElementById(groupId);
+    var selected = [];
+    group.querySelectorAll('.multi-btn.selected').forEach(function(b) {
+      selected.push(b.textContent.trim());
+    });
+    answers[key] = selected.join('; ');
+  }
+
+  function selectName(el, name) {
+    document.querySelectorAll('.name-card').forEach(function(c) { c.classList.remove('selected'); });
+    el.classList.add('selected');
+    answers['preferred_name'] = name;
+  }
+
+  function saveText(key, val) {
+    answers[key] = val;
+  }
+
+  // ── Submit ──────────────────────────────────────────
+  // SETUP: Replace YOUR_FORM_ID below with the ID from formspree.io
+  // Steps: 1. Go to formspree.io  2. Sign up free  3. New Form → name it "Pilot Feedback"
+  //        4. Copy the form ID (looks like: xpwzabcd)  5. Paste it below
+  var FORMSPREE_ID = 'mzdqdkep';
+
+  function submitForm() {
+    answers['submitted_at'] = new Date().toISOString();
+    answers['email_recipient'] = 'enduro.nary-0o@icloud.com';
+
+    var btn = document.getElementById('btnNext');
+    btn.textContent = 'Sending…';
+    btn.disabled = true;
+
+    // Flatten answers into FormData for Formspree
+    var formData = new FormData();
+    Object.keys(answers).forEach(function(k) {
+      formData.append(k, answers[k] || '');
+    });
+    // Formspree _replyto lets you see who submitted (optional)
+    formData.append('_subject', 'New pilot feedback — Nap Tracker');
+
+    fetch('https://formspree.io/f/' + FORMSPREE_ID, {
+      method: 'POST',
+      body: formData,
+      headers: { 'Accept': 'application/json' }
+    })
+    .then(function(res) {
+      if (res.ok) {
+        showThanks();
+      } else {
+        res.json().then(function(data) {
+          showError(data.errors ? data.errors.map(function(e){return e.message;}).join(', ') : 'Submission failed');
+        });
+      }
+    })
+    .catch(function() {
+      // Fallback: save locally and show thanks anyway
+      localStorage.setItem('pilot_feedback_' + Date.now(), JSON.stringify(answers));
+      showThanks(true);
+    });
+  }
+
+  function showError(msg) {
+    var btn = document.getElementById('btnNext');
+    btn.textContent = 'Try again →';
+    btn.disabled = false;
+    var err = document.getElementById('submitError');
+    if (!err) {
+      err = document.createElement('div');
+      err.id = 'submitError';
+      err.style.cssText = 'color:#f87171;font-size:13px;padding:10px 24px;text-align:center';
+      document.getElementById('navRow').after(err);
+    }
+    err.textContent = '⚠️ ' + msg + ' — please try again.';
+  }
+
+  function showThanks(offline) {
+    // Hide form chrome
+    document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+    document.getElementById('navRow').style.display = 'none';
+    document.getElementById('progressLabel').parentElement.parentElement.style.display = 'none';
+    document.getElementById('stepDots').style.display = 'none';
+    var err = document.getElementById('submitError');
+    if (err) err.remove();
+
+    // Build summary
+    var labels = {
+      age: 'Baby age',
+      days_used: 'Days used',
+      household: 'Who used it',
+      opened_on_nap: 'Opened on nap',
+      suggestion_fit: 'Suggestion quality',
+      task_completed: 'Task completed',
+      feeling: 'Felt in control',
+      was_confused: 'Was confused',
+      friction: 'Friction points',
+      open_timing: 'When opened',
+      overall_rating: 'Overall rating',
+      would_recommend: 'Would recommend',
+      one_change: 'Top change needed',
+      preferred_name: 'Preferred name',
+    };
+
+    var rows = '';
+    Object.keys(labels).forEach(function(k) {
+      if (answers[k]) {
+        rows += '<div class="summary-row">'
+          + '<span class="summary-key">' + labels[k] + '</span>'
+          + '<span class="summary-val">' + answers[k] + '</span>'
+          + '</div>';
+      }
+    });
+
+    document.getElementById('summaryRows').innerHTML = rows || '<div class="summary-row"><span class="summary-key">No answers recorded</span></div>';
+
+    if (offline) {
+      var note = document.createElement('div');
+      note.style.cssText = 'font-size:12px;color:var(--amber);margin-top:12px;padding:8px 12px;background:rgba(255,209,102,0.08);border-radius:8px;border:1px solid rgba(255,209,102,0.2)';
+      note.textContent = '⚠️ Saved locally — will send when connection is restored.';
+      document.querySelector('.thanks-summary').after(note);
+    }
+
+    document.getElementById('thanks').classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  init();
+</script>
+</body>
+</html>
