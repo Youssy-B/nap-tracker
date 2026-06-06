@@ -14,8 +14,8 @@
   --border:   #2c303c;
   --accent:   #7eb8f7;
   --text:     #eaecf2;
-  --muted:    #6b7080;
-  --subtle:   #3a3f50;
+  --muted:    #8b95aa;
+  --subtle:   #4a5168;
   --amber:    #f0b96b;
   --teal:     #5ecfb0;
   --purple:   #b09fec;
@@ -853,7 +853,7 @@ function renderToday() {
     }
 
     // ── Chore card — wearing-aware ──────────────────────────────
-    if (!inSurvival) {
+    if (!inSurvival && !choreDone) {
       var choreMeta=getChoreMeta(chore);
       var wearingConflict=state.babyWearing&&chore&&choreMeta&&!choreMeta.wearing;
 
@@ -907,9 +907,16 @@ function renderToday() {
       +'<input type="time" class="field-input" style="margin:0;padding:0;border:none;background:transparent;font-size:16px;font-weight:700;color:'+(state.bedTime?'var(--accent)':'var(--subtle)')+'" '+(state.bedTime?'value="'+state.bedTime+'"':'')+' onchange="setBed(this.value)"></div>'
       +'</div>';
 
-    // ── Today's nap list ────────────────────────────────────────
+    // ── Today's nap list — tap to expand ────────────────────────────
     if (naps.length>0) {
-      h+='<div class="card"><div class="card-label">Today\'s naps</div>';
+      var napListOpen = !!expandedDays['__today_naps__'];
+      h+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;cursor:pointer" onclick="toggleTodayNaps()">'
+        +'<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">Today\'s naps ('+naps.length+')</span>'
+        +'<span style="font-size:12px;color:var(--accent)">'+(napListOpen?'▲':'▼')+'</span>'
+        +'</div>';
+      if (napListOpen) {
+      h+='<div style="padding:0 14px 12px">';
       naps.forEach(function(n,i){
         var d=durMins(n.start,n.end);
         h+='<div class="nap-item">'
@@ -922,6 +929,8 @@ function renderToday() {
           +'</div>';
       });
       h+='</div>';
+      } // end napListOpen
+      h+='</div>'; // end collapsible wrapper
     }
   }
 
@@ -930,8 +939,10 @@ function renderToday() {
 function renderPatterns() {
   var el = document.getElementById('tab-content');
   var allDays = Object.entries(state.days).sort(function(a,b){ return b[0].localeCompare(a[0]); });
-  if (allDays.length < 2) {
-    el.innerHTML = '<div class="empty">Log at least 2 days<br>to see patterns emerge.</div>';
+  var dayCount = allDays.length;
+
+  if (dayCount < 2) {
+    el.innerHTML = '<div class="empty">Log a few days of naps<br>and patterns will appear here.</div>';
     return;
   }
 
@@ -942,61 +953,72 @@ function renderPatterns() {
   var avgWW = getAvgWakeWindow();
   var contactPct = allNaps.length > 0 ? Math.round(allNaps.filter(function(n){ return n.type==='contact'; }).length / allNaps.length * 100) : 0;
 
-  // ── 7-day Gantt ──────────────────────────────────────────────
-  var last7 = allDays.slice(0, 7).reverse(); // oldest first for top-to-bottom
-  var DAY_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  // Timeline: 6am–11pm = 17hrs = 1020 mins
-  var T_START = 6 * 60, T_END = 23 * 60, T_SPAN = T_END - T_START;
-  var axisLabels = ['6am','9am','12pm','3pm','6pm','9pm'];
-  var axisPositions = [0, 180, 360, 540, 720, 900]; // mins from T_START
+  // Progressive tiers based on days logged
+  var showGantt      = dayCount >= 14;
+  var showPrediction = dayCount >= 7;
+  var showGaps       = dayCount >= 7;
 
   var h = '';
 
-  h += '<div class="gantt-wrap">';
-  h += '<div class="gantt-title">📅 7-Day Sleep Map</div>';
-  // Axis labels
-  h += '<div class="gantt-axis">';
-  axisLabels.forEach(function(lbl, i) {
-    h += '<span class="gantt-axis-label" style="position:relative;left:'+(i===0?'0':'-10px')+'">'+lbl+'</span>';
-  });
-  h += '</div>';
+  // ── Tier progress nudge ──────────────────────────────────────
+  if (!showPrediction) {
+    var daysLeft = 7 - dayCount;
+    h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--muted);line-height:1.5">'
+      + '📈 Log <strong style="color:var(--text)">' + daysLeft + ' more day' + (daysLeft===1?'':'s') + '</strong> to unlock your personalised prediction window.</div>';
+  } else if (!showGantt) {
+    var daysLeft2 = 14 - dayCount;
+    h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--muted);line-height:1.5">'
+      + '🗺️ <strong style="color:var(--text)">' + daysLeft2 + ' more day' + (daysLeft2===1?'':'s') + '</strong> until your 14-day sleep map unlocks.</div>';
+  }
 
-  last7.forEach(function(entry) {
-    var date = entry[0], naps = entry[1];
-    var d = new Date(date+'T12:00:00');
-    var dayLabel = DAY_SHORT[d.getDay()];
-    var isToday = date === todayKey();
-    h += '<div class="gantt-row">';
-    h += '<div class="gantt-day-label" style="color:'+(isToday?'var(--accent)':'var(--muted)')+'">'+dayLabel+'</div>';
-    h += '<div class="gantt-track">';
-    naps.forEach(function(n) {
-      if (!n.start) return;
-      var sp = n.start.split(':').map(Number);
-      var sMins = sp[0]*60+sp[1] - T_START;
-      var ep = n.end ? n.end.split(':').map(Number) : null;
-      var eMins = ep ? ep[0]*60+ep[1] - T_START : sMins + 45;
-      var left = Math.max(0, sMins / T_SPAN * 100);
-      var width = Math.min(100 - left, Math.max(1, (eMins - sMins) / T_SPAN * 100));
-      var col = {contact:'var(--contact-col)', cot:'var(--cot-col)', pram:'var(--pram-col)'}[n.type] || 'var(--accent)';
-      h += '<div class="gantt-seg" style="left:'+left+'%;width:'+width+'%;background:'+col+'"></div>';
+  // ── 7-day Gantt — only after 14 days ─────────────────────────
+  if (showGantt) {
+    var last7 = allDays.slice(0, 7).reverse();
+    var DAY_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var T_START = 6 * 60, T_END = 23 * 60, T_SPAN = T_END - T_START;
+    var axisLabels = ['6am','9am','12pm','3pm','6pm','9pm'];
+
+    h += '<div class="gantt-wrap">';
+    h += '<div class="gantt-title">📅 14-Day Sleep Map</div>';
+    h += '<div class="gantt-axis">';
+    axisLabels.forEach(function(lbl, i) {
+      h += '<span class="gantt-axis-label" style="position:relative;left:'+(i===0?'0':'-10px')+'">'+lbl+'</span>';
+    });
+    h += '</div>';
+    last7.forEach(function(entry) {
+      var date = entry[0], naps = entry[1];
+      var d = new Date(date+'T12:00:00');
+      var dayLabel = DAY_SHORT[d.getDay()];
+      var isToday = date === todayKey();
+      h += '<div class="gantt-row">';
+      h += '<div class="gantt-day-label" style="color:'+(isToday?'var(--accent)':'var(--muted)')+'">'+dayLabel+'</div>';
+      h += '<div class="gantt-track">';
+      naps.forEach(function(n) {
+        if (!n.start) return;
+        var sp = n.start.split(':').map(Number);
+        var sMins = sp[0]*60+sp[1] - T_START;
+        var ep = n.end ? n.end.split(':').map(Number) : null;
+        var eMins = ep ? ep[0]*60+ep[1] - T_START : sMins + 45;
+        var left = Math.max(0, sMins / T_SPAN * 100);
+        var width = Math.min(100 - left, Math.max(1, (eMins - sMins) / T_SPAN * 100));
+        var col = {contact:'var(--contact-col)', cot:'var(--cot-col)', pram:'var(--pram-col)'}[n.type] || 'var(--accent)';
+        h += '<div class="gantt-seg" style="left:'+left+'%;width:'+width+'%;background:'+col+'"></div>';
+      });
+      h += '</div></div>';
+    });
+    h += '<div style="display:flex;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">';
+    [['contact','var(--contact-col)','Contact'],['cot','var(--cot-col)','Cot/Pram']].forEach(function(t){
+      h += '<div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:2px;background:'+t[1]+'"></div><span style="font-size:11px;color:var(--muted)">'+t[2]+'</span></div>';
     });
     h += '</div></div>';
-  });
+  }
 
-  // Legend
-  h += '<div style="display:flex;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">';
-  [['contact','var(--contact-col)','Contact'],['cot','var(--cot-col)','Cot/Pram']].forEach(function(t){
-    h += '<div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:2px;background:'+t[1]+'"></div><span style="font-size:11px;color:var(--muted)">'+t[2]+'</span></div>';
-  });
-  h += '</div></div>';
-
-  // ── Stats 2×2 ────────────────────────────────────────────────
-  // Find most common nap start hour (for "Common Start")
+  // ── Stats 2×2 — always shown ─────────────────────────────────
   var startHours = done.map(function(n){ return parseInt(n.start.split(':')[0]); });
   var hourFreq = {};
   startHours.forEach(function(hr){ hourFreq[hr] = (hourFreq[hr]||0)+1; });
   var peakHour = Object.keys(hourFreq).sort(function(a,b){ return hourFreq[b]-hourFreq[a]; })[0];
-  var peakHourFmt = peakHour ? fmtTime(peakHour+':00') : '—';
+  var peakHourFmt = peakHour ? fmtTime(pad(peakHour)+':00') : '—';
 
   h += '<div class="stats-grid">';
   h += '<div class="stat-tile"><div class="stat-tile-label">Avg naps/day</div><div class="stat-tile-value" style="color:var(--accent)">'+avgPerDay+'</div><div class="stat-tile-sub">blocks</div></div>';
@@ -1005,95 +1027,96 @@ function renderPatterns() {
   h += '<div class="stat-tile"><div class="stat-tile-label">Wake window avg</div><div class="stat-tile-value" style="color:var(--purple);font-size:20px">'+fmtDur(avgWW)+'</div><div class="stat-tile-sub">between naps</div></div>';
   h += '</div>';
 
-  // ── Goal-linked Prediction ────────────────────────────────────
-  var goal = PARENT_GOALS.find(function(g){ return g.id === state.parentGoal; }) || PARENT_GOALS[0];
-  var vibe = SLEEP_VIBES.find(function(v){ return v.id === state.sleepVibe; }) || SLEEP_VIBES[1];
+  // ── Prediction — after 7 days ─────────────────────────────────
+  if (showPrediction) {
+    var goal = PARENT_GOALS.find(function(g){ return g.id === state.parentGoal; }) || PARENT_GOALS[0];
+    var vibe = SLEEP_VIBES.find(function(v){ return v.id === state.sleepVibe; }) || SLEEP_VIBES[1];
+    var contactCount = done.filter(function(n){ return n.type==='contact'; }).length;
+    var cotCount     = done.filter(function(n){ return n.type==='cot'||n.type==='pram'; }).length;
+    var likelyType   = cotCount >= contactCount ? 'Cot' : 'Contact';
+    var predTimeStr  = peakHour ? fmtTime(pad(peakHour)+':00') : '—';
+    var confidence   = vibe.id === 'predictable' ? 'High confidence' : vibe.id === 'chaos' ? 'Estimate — naps vary a lot' : 'Low confidence — regression phase';
 
-  // Find tomorrow's predicted best window: peak start hour + most common nap type
-  var contactCount = done.filter(function(n){ return n.type==='contact'; }).length;
-  var cotCount     = done.filter(function(n){ return n.type==='cot'||n.type==='pram'; }).length;
-  var likelyType   = cotCount >= contactCount ? 'Cot' : 'Contact';
-  var predTimeStr  = peakHour ? fmtTime(peakHour+':00') : '10:30 AM';
-  var confidence   = vibe.id === 'predictable' ? 'High confidence' : vibe.id === 'chaos' ? 'Estimate only — naps vary' : 'Low confidence — regression phase';
+    h += '<div class="prediction-card">';
+    h += '<div class="prediction-eyebrow">💡 Prediction — based on '+dayCount+' days</div>';
+    h += '<div class="prediction-body">Your best window for <strong>'+goal.label+'</strong> tomorrow is predicted around <strong>'+predTimeStr+'</strong> during a '+likelyType+' nap.</div>';
+    h += '<div class="prediction-stats">';
+    h += '<div class="prediction-stat">📊 Naps/day: <strong>'+avgPerDay+'</strong></div>';
+    h += '<div class="prediction-stat">⏱ Avg stay: <strong>'+fmtDur(avgDur)+'</strong></div>';
+    h += '<div class="prediction-stat">🎯 <strong>'+confidence+'</strong></div>';
+    h += '</div></div>';
+  }
 
-  h += '<div class="prediction-card">';
-  h += '<div class="prediction-eyebrow">💡 Prediction — based on '+allDays.length+' days</div>';
-  h += '<div class="prediction-body">Your best window for <strong>'+goal.label+'</strong> tomorrow is predicted around <strong>'+predTimeStr+'</strong> during a '+likelyType+' nap.</div>';
-  h += '<div class="prediction-stats">';
-  h += '<div class="prediction-stat">📊 Naps/day: <strong>'+avgPerDay+'</strong></div>';
-  h += '<div class="prediction-stat">⏱ Avg stay: <strong>'+fmtDur(avgDur)+'</strong></div>';
-  h += '<div class="prediction-stat">🎯 Confidence: <strong>'+confidence+'</strong></div>';
-  h += '</div></div>';
+  // ── Gaps — after 7 days, with plain-English explanations ─────
+  if (showGaps) {
+    var goal2 = PARENT_GOALS.find(function(g){ return g.id === state.parentGoal; }) || PARENT_GOALS[0];
+    var gaps = [];
 
-  // ── Recurring Gaps & Opportunities ───────────────────────────
-  // Identify gaps: morning (before first nap), afternoon (between naps), evening
-  var gaps = [];
+    var firstNapMins = done.length > 0
+      ? Math.round(done.map(function(n){ return parseInt(n.start.split(':')[0])*60+parseInt(n.start.split(':')[1]); })
+          .reduce(function(a,b){ return a+b; }, 0) / done.length)
+      : null;
 
-  // Morning gap: time from typical wake (7am default) to first nap
-  var firstNapMins = done.length > 0
-    ? Math.round(done.map(function(n){ return parseInt(n.start.split(':')[0])*60+parseInt(n.start.split(':')[1]); })
-        .reduce(function(a,b){ return a+b; }, 0) / done.length)
-    : null;
+    if (firstNapMins) {
+      var wakeBase = state.wakeTime ? (parseInt(state.wakeTime.split(':')[0])*60+parseInt(state.wakeTime.split(':')[1])) : 7*60;
+      var morningGap = firstNapMins - wakeBase;
+      if (morningGap >= 30) {
+        var midMins = Math.round(wakeBase + morningGap/2);
+        var midHr = Math.floor(midMins/60), midMin = midMins%60;
+        var wakeStr = state.wakeTime ? fmtTime(state.wakeTime) : '7:00am';
+        gaps.push({
+          icon: '🌅',
+          name: 'Morning window ('+fmtDur(morningGap)+')',
+          detail: 'From when you wake ('+wakeStr+') until the first nap. Your quietest, most reliable window — best for focus tasks.',
+          type: 'focus',
+          badge: 'BEST FOCUS\nWINDOW',
+          badgeCls: 'gap-badge-focus',
+          cardCls: 'gap-card-focus'
+        });
+      }
+    }
 
-  if (firstNapMins) {
-    var morningGap = firstNapMins - 7*60;
-    if (morningGap >= 30) {
-      var midMins = Math.round(7*60 + morningGap/2);
-      var midHr = Math.floor(midMins/60), midMin = midMins%60;
+    if (done.length >= 4) {
+      var startMinsArr = done.map(function(n){ return parseInt(n.start.split(':')[0])*60+parseInt(n.start.split(':')[1]); });
+      var mean = startMinsArr.reduce(function(a,b){ return a+b; }, 0) / startMinsArr.length;
+      var variance = startMinsArr.reduce(function(a,b){ return a+Math.pow(b-mean,2); }, 0) / startMinsArr.length;
+      var stdDev = Math.round(Math.sqrt(variance));
+
+      if (stdDev > 20) {
+        gaps.push({
+          icon: '🌇',
+          name: 'Afternoon naps vary (±'+fmtDur(stdDev)+')',
+          detail: 'Afternoon nap start times vary by about '+fmtDur(stdDev)+' day to day. Keep tasks short and interruptible during this window.',
+          type: 'quick',
+          badge: 'QUICK\nTASKS',
+          badgeCls: 'gap-badge-quick',
+          cardCls: 'gap-card-quick'
+        });
+      }
+    }
+
+    if (contactPct >= 40) {
       gaps.push({
-        icon: '🌅',
-        name: 'Morning window ('+fmtDur(morningGap)+')',
-        detail: 'Identified most days around '+fmtTime(pad(midHr)+':'+pad(midMin)),
-        type: morningGap >= 60 ? 'focus' : 'quick',
-        badge: morningGap >= 60 ? 'BEST FOCUS\nWINDOW' : 'QUICK\nGAPS',
-        badgeCls: morningGap >= 60 ? 'gap-badge-focus' : 'gap-badge-quick',
-        cardCls: morningGap >= 60 ? 'gap-card-focus' : 'gap-card-quick'
+        icon: goal2.icon,
+        name: goal2.label+' via Contact ('+contactPct+'% of naps)',
+        detail: contactPct+'% of naps are contact naps. During these you\'re hands-busy but phone-free — ideal for '+goal2.label.toLowerCase()+' tasks you can do one-handed.',
+        type: 'rest',
+        badge: goal2.icon+'\nGOAL',
+        badgeCls: 'gap-badge-rest',
+        cardCls: 'gap-card-rest'
       });
     }
-  }
 
-  // Afternoon drift: variance of nap start times — high variance = erratic = quick tasks only
-  if (done.length >= 4) {
-    var startMinsArr = done.map(function(n){ return parseInt(n.start.split(':')[0])*60+parseInt(n.start.split(':')[1]); });
-    var mean = startMinsArr.reduce(function(a,b){ return a+b; }, 0) / startMinsArr.length;
-    var variance = startMinsArr.reduce(function(a,b){ return a+Math.pow(b-mean,2); }, 0) / startMinsArr.length;
-    var stdDev = Math.round(Math.sqrt(variance));
-
-    if (stdDev > 20) {
-      gaps.push({
-        icon: '🌇',
-        name: 'Afternoon drift (±'+fmtDur(stdDev)+')',
-        detail: stdDev > 40 ? 'Highly erratic start times. Best for low-energy tasks.' : 'Some variability — keep tasks interruptible.',
-        type: 'quick',
-        badge: 'QUICK\nGAPS',
-        badgeCls: 'gap-badge-quick',
-        cardCls: 'gap-card-quick'
+    if (gaps.length > 0) {
+      h += '<div class="gaps-title">💡 Your recurring windows</div>';
+      gaps.forEach(function(g) {
+        h += '<div class="gap-card '+g.cardCls+'">';
+        h += '<div class="gap-card-left"><div class="gap-card-name">'+g.icon+' '+g.name+'</div>';
+        h += '<div class="gap-card-detail">'+g.detail+'</div></div>';
+        h += '<div class="gap-card-badge '+g.badgeCls+'">'+g.badge.replace('\n','<br>')+'</div>';
+        h += '</div>';
       });
     }
-  }
-
-  // Rest opportunity: if contact naps are common, flag it for goal-linked rest
-  if (contactPct >= 40) {
-    gaps.push({
-      icon: goal.icon,
-      name: goal.label+' via Contact ('+contactPct+'% of naps)',
-      detail: 'Most common nap type for you. Ideal for phone-based '+goal.label.toLowerCase()+' tasks.',
-      type: 'rest',
-      badge: goal.icon+'\nGOAL',
-      badgeCls: 'gap-badge-rest',
-      cardCls: 'gap-card-rest'
-    });
-  }
-
-  if (gaps.length > 0) {
-    h += '<div class="gaps-title">💡 Recurring gaps & opportunities</div>';
-    gaps.forEach(function(g) {
-      h += '<div class="gap-card '+g.cardCls+'">';
-      h += '<div class="gap-card-left"><div class="gap-card-name">'+g.icon+' '+g.name+'</div>';
-      h += '<div class="gap-card-detail">'+g.detail+'</div></div>';
-      h += '<div class="gap-card-badge '+g.badgeCls+'">'+g.badge.replace('\n','<br>')+'</div>';
-      h += '</div>';
-    });
   }
 
   el.innerHTML = h;
@@ -1265,7 +1288,20 @@ function endOngoingNap(){
 }
 
 function setWake(v){state.wakeTime=v;state.wakeDate=todayKey();saveState();toast('Wake time saved');render();}
-function setBed(v){state.bedTime=v;state.bedDate=todayKey();saveState();toast('Bedtime saved');render();}
+function setBed(v){
+  // If it's early morning (before 8am) and we already have a bed time from yesterday, edit yesterday
+  var hour = new Date().getHours();
+  var yest = _yest;
+  if (hour < 8 && state.bedDate === yest) {
+    state.bedTime = v; // keep bedDate as yesterday
+  } else if (hour < 8 && !state.bedDate) {
+    // Setting bed time early morning = logging last night
+    state.bedTime = v; state.bedDate = yest;
+  } else {
+    state.bedTime = v; state.bedDate = todayKey();
+  }
+  saveState(); toast('Bedtime saved'); render();
+}
 
 function toggleChoreDone(){
   state.choreDone=!state.choreDone;state.choreDoneDate=todayKey();
@@ -1278,6 +1314,8 @@ function deleteNap(dateKey,index){
   if(!state.days[dateKey].length)delete state.days[dateKey];
   saveState();toast('Nap deleted');render();
 }
+
+function toggleTodayNaps(){expandedDays['__today_naps__']=!expandedDays['__today_naps__'];render();}
 
 function toggleWindowRoutes(){windowRoutesOpen=!windowRoutesOpen;render();}
 
