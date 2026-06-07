@@ -116,6 +116,25 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 .progress-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.4s ease; }
 .nap-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .nap-item:last-child { border-bottom: none; }
+/* Welcome screen */
+.welcome-wrap { position: fixed; inset: 0; background: var(--bg); z-index: 999; display: flex; flex-direction: column; justify-content: center; padding: 32px 24px 48px; }
+.welcome-logo { font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 32px; }
+.welcome-title { font-size: 32px; font-weight: 800; color: var(--text); line-height: 1.15; letter-spacing: -0.5px; margin-bottom: 10px; }
+.welcome-sub { font-size: 16px; color: var(--muted); line-height: 1.6; margin-bottom: 36px; }
+.welcome-field-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+.welcome-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 17px; font-weight: 600; padding: 14px 16px; outline: none; margin-bottom: 20px; -webkit-appearance: none; }
+.welcome-input:focus { border-color: var(--accent); }
+.welcome-input::placeholder { color: var(--subtle); font-weight: 400; }
+.welcome-gender-row { display: flex; gap: 10px; margin-bottom: 32px; }
+.welcome-gender-btn { flex: 1; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; color: var(--muted); font-size: 15px; font-weight: 600; cursor: pointer; text-align: center; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+.welcome-gender-btn.selected { border-color: var(--accent); background: #1a2a3a; color: var(--text); }
+.welcome-instruction { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 28px; }
+.welcome-instruction-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.welcome-instruction-row + .welcome-instruction-row { border-top: 1px solid var(--border); margin-top: 6px; }
+.welcome-instruction-icon { font-size: 20px; flex-shrink: 0; width: 28px; text-align: center; }
+.welcome-instruction-text { font-size: 14px; color: var(--text); line-height: 1.4; }
+.welcome-instruction-text span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.welcome-btn { width: 100%; background: var(--teal); border: none; border-radius: 16px; color: #0f1117; font-size: 17px; font-weight: 700; padding: 16px; cursor: pointer; font-family: 'Inter', sans-serif; letter-spacing: 0.2px; }
 .nap-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .dot-contact { background: var(--contact-col); }
 .dot-cot { background: var(--cot-col); }
@@ -280,17 +299,17 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 </style>
 </head>
 <body>
-
+<div id="welcome-screen" class="welcome-wrap" style="display:none"></div>
 <div class="app-header">
   <div class="header-row">
     <div class="app-title">Nap Tracker</div>
     <div class="app-date" id="app-date"></div>
   </div>
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('today',this)">Today</div>
+    <div class="tab active" onclick="switchTab('today',this)">Home</div>
     <div class="tab" onclick="switchTab('patterns',this)">Patterns</div>
     <div class="tab" onclick="switchTab('history',this)">History</div>
-    <div class="tab" onclick="switchTab('settings',this)">Settings</div>
+    <div class="tab" onclick="switchTab('settings',this)">Profile</div>
   </div>
 </div>
 
@@ -430,7 +449,8 @@ function defaultState() {
     survivalMode: false, survivalUntil: null,
     babyWearing: false,
     parentGoal: 'rest',
-    sleepVibe: 'chaos'
+    sleepVibe: 'chaos',
+    onboarded: false
   };
 }
 
@@ -448,6 +468,7 @@ function loadState() {
     if (s.babyWearing === undefined) { s.babyWearing = false; }
     if (!s.parentGoal) s.parentGoal = 'rest';
     if (!s.sleepVibe) s.sleepVibe = 'chaos';
+    if (s.onboarded === undefined) { s.onboarded = !!(s.babyProfile && s.babyProfile.name); }
     return s;
   } catch(e) { return defaultState(); }
 }
@@ -497,6 +518,21 @@ function fmtDur(m) {
   if (!m||m<=0) return '\u2014';
   if (m<60) return m+'m';
   return Math.floor(m/60)+'h'+(m%60>0?' '+m%60+'m':'');
+}
+
+function fmtDurSecs(totalSecs) {
+  var m=Math.floor(totalSecs/60), s=totalSecs%60;
+  if (m>=60){var h=Math.floor(m/60),rm=m%60;return h+'h '+pad(rm)+'m '+pad(s)+'s';}
+  return pad(m)+':'+pad(s);
+}
+
+function elapsedSecs(startStr) {
+  var parts=startStr.split(':').map(Number);
+  var startSecs=parts[0]*3600+parts[1]*60;
+  var now=new Date();
+  var nowSecs=now.getHours()*3600+now.getMinutes()*60+now.getSeconds();
+  var diff=nowSecs-startSecs;
+  return diff<0?diff+86400:diff;
 }
 
 function typeColor(t) {
@@ -711,77 +747,104 @@ function switchTab(tab, el) {
 }
 
 function render() {
+  if (!state.onboarded) { renderWelcome(); return; }
+  document.getElementById('welcome-screen').style.display = 'none';
   if (currentTab==='today') renderToday();
   else if (currentTab==='patterns') renderPatterns();
   else if (currentTab==='history') renderHistory();
   else renderSettings();
 }
 
+function renderWelcome() {
+  var el = document.getElementById('welcome-screen');
+  el.style.display = 'flex';
+  var name = state.babyProfile.name || '';
+  var gender = state.babyProfile.gender || '';
+  el.innerHTML =
+    '<div class="welcome-logo">🌙 Nap Tracker</div>'
+   +'<div class="welcome-title">Your nap window,<br>made useful.</div>'
+   +'<div class="welcome-sub">Tells you the one best thing to do while your baby sleeps.</div>'
+   +'<div class="welcome-field-label">Baby\'s name</div>'
+   +'<input id="welcome-name" class="welcome-input" type="text" placeholder="e.g. Leo" value="'+name+'" autocomplete="off" autocorrect="off" spellcheck="false">'
+   +'<div class="welcome-field-label">Gender</div>'
+   +'<div class="welcome-gender-row">'
+   +'<button class="welcome-gender-btn'+(gender==='boy'?' selected':'')+'" onclick="selectGender(\'boy\')">Boy</button>'
+   +'<button class="welcome-gender-btn'+(gender==='girl'?' selected':'')+'" onclick="selectGender(\'girl\')">Girl</button>'
+   +'<button class="welcome-gender-btn'+(gender==='other'?' selected':'')+'" onclick="selectGender(\'other\')">Other</button>'
+   +'</div>'
+   +'<div class="welcome-instruction">'
+   +'<div class="welcome-instruction-row">'
+   +'<div class="welcome-instruction-icon">▶️</div>'
+   +'<div class="welcome-instruction-text">Tap <strong>Start Nap</strong> the moment baby goes down<span>Choose Contact or Cot / Pram</span></div>'
+   +'</div>'
+   +'<div class="welcome-instruction-row">'
+   +'<div class="welcome-instruction-icon">⏹️</div>'
+   +'<div class="welcome-instruction-text">Tap <strong>End Nap</strong> when they wake<span>Your window suggestion appears straight away</span></div>'
+   +'</div>'
+   +'</div>'
+   +'<button class="welcome-btn" onclick="completeWelcome()">Let\'s go →</button>';
+}
+
+function selectGender(g) {
+  state.babyProfile.gender = g;
+  saveState();
+  renderWelcome();
+}
+
+function completeWelcome() {
+  var nameInput = document.getElementById('welcome-name');
+  var name = nameInput ? nameInput.value.trim() : '';
+  if (!name) { nameInput.style.borderColor = 'var(--red)'; nameInput.focus(); return; }
+  state.babyProfile.name = name;
+  state.onboarded = true;
+  saveState();
+  toast('Welcome! Tap Start Nap when ' + name + ' goes down 🌙');
+  render();
+}
+
 function renderToday() {
   var naps=getTodayNaps();
   var ongoing=naps.find(function(n){return n.start&&!n.end;});
   var isWindDown=!!(state.bedTime&&state.bedDate===todayKey());
+  var chore=getChoreForDay(new Date().getDay());
+  var choreDone=state.choreDone&&state.choreDoneDate===todayKey();
+  var inSurvival=isSurvivalActive();
+  var avgWW=getAvgWakeWindow();
   var napTotal=getNapTotal();
   var overnight=getOvernight();
   var totalSleep=overnight?napTotal+overnight:napTotal;
-  var chore=getChoreForDay(new Date().getDay());
-  var avgWW=getAvgWakeWindow();
-  var choreDone=state.choreDone&&state.choreDoneDate===todayKey();
-  var inSurvival=isSurvivalActive();
+  var allDays=Object.keys(state.days);
+  var everLoggedNap=allDays.length>0||naps.filter(function(n){return n.end;}).length>0;
+  var choreConfigured=!!(state.choreConfig&&(state.choreConfig.binDay!==null||state.choreConfig.shoppingDay!==null||state.choreConfig.restDay!==null));
+  var goalSet=state.parentGoal&&state.parentGoal!=='rest'||state.sleepVibe!=='chaos';
 
   document.getElementById('app-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
-
   var h='';
 
-  // ── Slim goal + vibe strip ────────────────────────────────────
-  if (!isWindDown) {
-    var todayGoal=PARENT_GOALS.find(function(g){return g.id===state.parentGoal;})||PARENT_GOALS[0];
-    var todayVibe=SLEEP_VIBES.find(function(v){return v.id===state.sleepVibe;})||SLEEP_VIBES[1];
-    var vibeColor=todayVibe.id==='regression'?'var(--red)':todayVibe.id==='chaos'?'var(--amber)':'var(--teal)';
-    h+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px">'
-      +'<span style="font-size:15px">'+todayGoal.icon+'</span>'
-      +'<span style="font-size:13px;font-weight:600;color:var(--text);flex:1">'+todayGoal.label+'</span>'
-      +'<span style="font-size:12px;color:'+vibeColor+';font-weight:600">'+todayVibe.icon+' '+(todayVibe.id==='predictable'?'Steady':todayVibe.id==='chaos'?'Chaos':'Regression')+'</span>'
-      +'</div>';
-  }
-
-  // ── Night wind-down ───────────────────────────────────────────
   if (isWindDown) {
     h+='<div class="night-card">'
       +'<div style="font-size:11px;color:var(--purple);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">\uD83C\uDF19 Night</div>'
       +'<div style="font-size:15px;font-weight:600;color:var(--text);line-height:1.5">'+getTonightMessage()+'</div>'
       +'</div>';
 
-  // ── Nap in progress — focused view ───────────────────────────
   } else if (ongoing) {
-    var elapsed=durMins(ongoing.start,nowStr());
+    var secs=elapsedSecs(ongoing.start);
     var col=typeColor(ongoing.type);
     var napClass='napping-'+ongoing.type;
-    var prevNaps=naps.filter(function(n){return n.end&&n.start!==ongoing.start;}).sort(function(a,b){return b.end.localeCompare(a.end);});
-    var awakeFrom=prevNaps.length>0?prevNaps[0].end:state.wakeTime;
-    var awakeMins=awakeFrom?durMins(awakeFrom,ongoing.start):null;
-    var awakeStr=awakeMins&&awakeMins>0?(' \u00b7 awake '+fmtDur(awakeMins)+' before'):'';
+    var elapsed=durMins(ongoing.start,nowStr());
 
     h+='<div class="status-card '+napClass+'">'
       +'<div class="status-eyebrow" style="color:'+col+'"><span class="live-dot" style="background:'+col+'"></span>'
       +({contact:'\uD83D\uDCF1 Contact',cot:'\uD83D\uDECC Cot / Pram',pram:'\uD83D\uDECC Cot / Pram'}[ongoing.type]||ongoing.type)+' nap in progress</div>'
-      +'<div class="status-main" style="color:'+col+'">'+fmtDur(elapsed)+'</div>'
-      +'<div class="status-sub">Started '+fmtTime(ongoing.start)+awakeStr+'</div>'
+      +'<div id="live-timer" style="font-size:52px;font-weight:800;letter-spacing:-2px;line-height:1;margin:12px 0;color:'+col+'">'+fmtDurSecs(secs)+'</div>'
+      +'<div class="status-sub">Started '+fmtTime(ongoing.start)+'</div>'
       +'<button class="end-btn" onclick="endOngoingNap()">\u2713 End nap</button>'
       +'</div>';
 
     if (ongoing.type==='contact') {
-      // Contact nap: goal-driven suggestion, no collapse needed
       var sug=getContactSuggestion(elapsed);
-      var compHtml='';
-      if (sug.completed&&sug.completed.length>0) {
-        compHtml='<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">'
-          +'\u2713 Done: '+sug.completed.map(function(t){return t.label;}).join(' \u00b7 ')+'</div>';
-      }
-      var nextHtml='';
-      if (sug.next) {
-        nextHtml='<div style="font-size:11px;color:var(--muted);margin-top:4px">Next: '+sug.next.label+' at '+sug.next.minMins+'m</div>';
-      }
+      var nextHtml=sug.next?'<div style="font-size:11px;color:var(--muted);margin-top:4px">Next: '+sug.next.label+' at '+sug.next.minMins+'m</div>':'';
+      var compHtml=sug.completed&&sug.completed.length>0?'<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">\u2713 Done: '+sug.completed.map(function(t){return t.label;}).join(' \u00b7 ')+'</div>':'';
       h+='<div class="suggestion suggestion-contact">'
         +'<div style="width:100%"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
         +'<div class="suggestion-text"><div class="suggestion-label">'+sug.label+'</div>'
@@ -789,19 +852,17 @@ function renderToday() {
         +'<div class="suggestion-badge badge-rest" style="flex-shrink:0">\uD83D\uDCF1 Now</div></div>'
         +nextHtml+compHtml+'</div></div>';
     } else {
-      // Free nap: wearing toggle + collapsed window routes
-      h+='<div class="wearing-bar '+(state.babyWearing?'active':'')+'" onclick="toggleWearing()">'
-        +'<span style="font-size:15px">\uD83E\uDD31</span>'
-        +'<span style="flex:1;font-size:13px;font-weight:600;color:'+(state.babyWearing?'var(--contact-col)':'var(--muted)')+'">Baby wearing</span>'
-        +'<div class="toggle-switch '+(state.babyWearing?'on':'off')+'"><div class="toggle-knob"></div></div>'
-        +'</div>';
-
-      // Collapsed tap-to-expand window routes
+      if (everLoggedNap) {
+        h+='<div class="wearing-bar '+(state.babyWearing?'active':'')+'\" onclick="toggleWearing()">'
+          +'<span style="font-size:15px">\uD83E\uDD31</span>'
+          +'<span style="flex:1;font-size:13px;font-weight:600;color:'+(state.babyWearing?'var(--contact-col)':'var(--muted)')+'">Baby wearing</span>'
+          +'<div class="toggle-switch '+(state.babyWearing?'on':'off')+'"><div class="toggle-knob"></div></div>'
+          +'</div>';
+      }
       h+='<button class="window-toggle" onclick="toggleWindowRoutes()">'
-        +'<span class="window-toggle-label">'+(windowRoutesOpen?'\uD83E\uDAAF':'🪟')+' '+(windowRoutesOpen?'Hide suggestions':'See what to do with this window')+'</span>'
+        +'<span class="window-toggle-label">'+(windowRoutesOpen?'Hide suggestions':'What can I do now?')+'</span>'
         +'<span class="window-toggle-chevron">'+(windowRoutesOpen?'\u25b2':'\u25bc')+'</span>'
         +'</button>';
-
       if (windowRoutesOpen) {
         var rec=getWindowRecommendation(chore,elapsed);
         h+='<div style="background:var(--card);border:1px solid var(--border);border-left:3px solid '+rec.color+';border-radius:14px;padding:14px 16px;margin-bottom:10px">'
@@ -812,37 +873,104 @@ function renderToday() {
           +'</div>';
       }
     }
-    // FOCUSED VIEW: no chore, stats, or nap list shown while nap is running
 
-  // ── Idle — no nap in progress ─────────────────────────────────
   } else {
-    var ww=getWakeWindowMins();
-    if (ww!==null&&ww>0) {
-      var pct=ww/avgWW;
-      var wcls=pct>=0.9?'wake-red':pct>=0.7?'wake-amber':'wake-ok';
-      var whint=pct>=0.9?'\u26a0\ufe0f Nap likely very soon':pct>=0.7?'\uD83D\uDD14 Window closing':'Awake since last nap';
-      h+='<div class="wake-card '+wcls+'">'
-        +'<div class="wake-left"><div class="wake-eyebrow">Awake</div>'
-        +'<div class="wake-time">'+fmtDur(ww)+'</div>'
-        +'<div class="wake-hint">'+whint+'</div></div>'
-        +'<div class="wake-avg">Avg<br>window<br><strong>'+fmtDur(avgWW)+'</strong></div>'
-        +'</div>';
+    if (everLoggedNap&&avgWW>0) {
+      var ww=getWakeWindowMins();
+      if (ww!==null&&ww>0) {
+        var pct=ww/avgWW;
+        var wcls=pct>=0.9?'wake-red':pct>=0.7?'wake-amber':'wake-ok';
+        var whint=pct>=0.9?'\u26a0\ufe0f Nap likely very soon':pct>=0.7?'\uD83D\uDD14 Window closing':'Awake since last nap';
+        h+='<div class="wake-card '+wcls+'">'
+          +'<div class="wake-left"><div class="wake-eyebrow">Awake</div>'
+          +'<div class="wake-time">'+fmtDur(ww)+'</div>'
+          +'<div class="wake-hint">'+whint+'</div></div>'
+          +'<div class="wake-avg">Avg<br>window<br><strong>'+fmtDur(avgWW)+'</strong></div>'
+          +'</div>';
+      }
     }
 
     h+='<div class="nap-btns">'
       +'<button class="nap-btn nap-btn-contact" onclick="quickNap(\'contact\')">'
       +'<span class="nap-btn-icon">\uD83D\uDCF1</span>'
       +'<span class="nap-btn-title contact-col">Contact nap</span>'
-      +'<span class="nap-btn-sub contact-col">Phone tasks \u00b7 hands busy</span>'
+      +'<span class="nap-btn-sub contact-col">Holding baby \u00b7 hands busy</span>'
       +'</button>'
       +'<button class="nap-btn nap-btn-cot" onclick="quickNap(\'cot\')">'
       +'<span class="nap-btn-icon">\uD83D\uDECC</span>'
       +'<span class="nap-btn-title cot-col">Cot / Pram</span>'
-      +'<span class="nap-btn-sub cot-col">Fully free</span>'
+      +'<span class="nap-btn-sub cot-col">Baby down \u00b7 you\'re free</span>'
       +'</button>'
-      +'</div>';
+      +'</div>'
+      +'<div style="display:flex;justify-content:center;gap:20px;margin-bottom:16px;margin-top:-4px">'
+      +'<button onclick="showTooltip(\'contact\')" style="background:none;border:none;font-size:12px;color:var(--muted);cursor:pointer;font-family:\'Inter\',sans-serif;display:flex;align-items:center;gap:4px">'
+      +'\u2139\uFE0F What\'s a contact nap?'
+      +'</button>'
+      +'<button onclick="showTooltip(\'cot\')" style="background:none;border:none;font-size:12px;color:var(--muted);cursor:pointer;font-family:\'Inter\',sans-serif;display:flex;align-items:center;gap:4px">'
+      +'\u2139\uFE0F Cot / Pram?'
+      +'</button>'
+      +'</div>'
+      +'<div id="tooltip-box" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--muted);line-height:1.6"></div>';
 
-    // ── Survival banner ─────────────────────────────────────────
+    // First use hint — shown until first nap logged
+    if (!everLoggedNap) {
+      var babyName = (state.babyProfile && state.babyProfile.name) ? state.babyProfile.name : 'your baby';
+      h += '<div style="border:1px dashed var(--border);border-radius:14px;padding:20px 16px;text-align:center;margin-top:8px">'
+        +'<div style="font-size:28px;margin-bottom:10px">🌙</div>'
+        +'<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Ready when '+babyName+' naps</div>'
+        +'<div style="font-size:13px;color:var(--muted);line-height:1.7">Tap a button above the moment<br>'+babyName+' goes down to start.</div>'
+        +'</div>';
+    }
+
+    if (!inSurvival&&chore&&choreConfigured&&!choreDone) {
+      var choreMeta=getChoreMeta(chore);
+      var wearingConflict=state.babyWearing&&chore&&choreMeta&&!choreMeta.wearing;
+      var displayChore=chore,displayMeta=choreMeta,isAlternate=false;
+      if (wearingConflict) {
+        var safeAlts=Object.keys(FREE_CHORES_DB).filter(function(k){return FREE_CHORES_DB[k].wearing&&k!==chore;});
+        if (safeAlts.length>0){displayChore=safeAlts[0];displayMeta=FREE_CHORES_DB[displayChore];isAlternate=true;}
+      }
+      h+='<div class="chore-card">'
+        +'<div class="chore-left">'
+        +'<div class="chore-eyebrow">Today\'s chore'+(isAlternate?' \u00b7 \uD83E\uDD31 wearing swap':'')+'</div>'
+        +'<div class="chore-name">'+(displayChore||'\uD83D\uDE0C Rest day')+'</div>'
+        +(isAlternate?'<div class="chore-hint" style="color:var(--amber)">Swapped: '+chore+' needs two hands</div>'
+          :(displayChore?'<div class="chore-hint">'+(displayMeta&&displayMeta.noise===2?'\uD83D\uDD0A Noisy':displayMeta&&displayMeta.noise===0?'\uD83D\uDD07 Silent':'')+'</div>':''))
+        +'</div>'
+        +'<button class="chore-tick" onclick="toggleChoreDone()">\u25cb</button>'
+        +'</div>';
+      h+='<div style="text-align:right;margin-top:-4px;margin-bottom:8px">'
+        +'<button onclick="toggleSurvivalMode()" style="background:none;border:none;font-size:11px;color:var(--subtle);cursor:pointer;font-family:\'Inter\',sans-serif">\uD83C\uDF11 Survival Mode</button>'
+        +'</div>';
+    }
+
+    if (goalSet) {
+      var todayGoal=PARENT_GOALS.find(function(g){return g.id===state.parentGoal;})||PARENT_GOALS[0];
+      var todayVibe=SLEEP_VIBES.find(function(v){return v.id===state.sleepVibe;})||SLEEP_VIBES[1];
+      var vibeColor=todayVibe.id==='regression'?'var(--red)':todayVibe.id==='chaos'?'var(--amber)':'var(--teal)';
+      h+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px">'
+        +'<span style="font-size:15px">'+todayGoal.icon+'</span>'
+        +'<span style="font-size:13px;font-weight:600;color:var(--text);flex:1">'+todayGoal.label+'</span>'
+        +'<span style="font-size:12px;color:'+vibeColor+';font-weight:600">'+todayVibe.icon+' '+(todayVibe.id==='predictable'?'Steady':todayVibe.id==='chaos'?'Chaos':'Regression')+'</span>'
+        +'</div>';
+    }
+
+    if (everLoggedNap) {
+      h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">'
+        +'<div class="sleep-stat"><div class="sleep-num" style="color:var(--purple)">'+(napTotal>0?fmtDur(napTotal):'\u2014')+'</div><div class="sleep-lbl">Naps</div></div>'
+        +'<div class="sleep-stat"><div class="sleep-num" style="color:var(--accent)">'+(overnight?fmtDur(overnight):'\u2014')+'</div><div class="sleep-lbl">Night</div></div>'
+        +'<div class="sleep-stat"><div class="sleep-num" style="color:var(--teal)">'+(totalSleep>0?fmtDur(totalSleep):'\u2014')+'</div><div class="sleep-lbl">Total</div></div>'
+        +'</div>';
+      h+='<div style="display:flex;gap:8px;margin-bottom:10px">'
+        +'<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px">'
+        +'<div style="font-size:10px;color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px">\uD83C\uDF05 Baby woke up</div>'
+        +'<input type="time" class="field-input" style="margin:0;padding:0;border:none;background:transparent;font-size:16px;font-weight:700;color:'+(state.wakeTime?'var(--amber)':'var(--subtle)')+'" '+(state.wakeTime?'value="'+state.wakeTime+'"':'')+' onchange="setWake(this.value)"></div>'
+        +'<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px">'
+        +'<div style="font-size:10px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px">\uD83C\uDF19 Baby\'s bedtime</div>'
+        +'<input type="time" class="field-input" style="margin:0;padding:0;border:none;background:transparent;font-size:16px;font-weight:700;color:'+(state.bedTime?'var(--accent)':'var(--subtle)')+'" '+(state.bedTime?'value="'+state.bedTime+'"':'')+' onchange="setBed(this.value)"></div>'
+        +'</div>';
+    }
+
     if (inSurvival) {
       var msLeft=Math.max(0,Math.round((state.survivalUntil-new Date().getTime())/3600000));
       h+='<div class="survival-banner">'
@@ -851,90 +979,20 @@ function renderToday() {
         +'<button class="survival-btn" onclick="toggleSurvivalMode()">End</button>'
         +'</div>';
     }
-
-    // ── Chore card — wearing-aware ──────────────────────────────
-    if (!inSurvival && !choreDone) {
-      var choreMeta=getChoreMeta(chore);
-      var wearingConflict=state.babyWearing&&chore&&choreMeta&&!choreMeta.wearing;
-
-      // If wearing + chore conflict, find nearest wearing-safe alternative
-      var displayChore=chore, displayMeta=choreMeta, isAlternate=false;
-      if (wearingConflict) {
-        var safeAlts=Object.keys(FREE_CHORES_DB).filter(function(k){return FREE_CHORES_DB[k].wearing&&k!==chore;});
-        if (safeAlts.length>0) {
-          displayChore=safeAlts[0];
-          displayMeta=FREE_CHORES_DB[displayChore];
-          isAlternate=true;
-        }
-      }
-
-      h+='<div class="chore-card '+(choreDone&&!isAlternate?'chore-done':'')+'">'
-        +'<div class="chore-left">'
-        +'<div class="chore-eyebrow">Today\'s chore'+(isAlternate?' \u00b7 \uD83E\uDD31 wearing swap':'')+'</div>'
-        +'<div class="chore-name">'+(displayChore||'\uD83D\uDE0C Rest day')+'</div>'
-        +(isAlternate
-          ?'<div class="chore-hint" style="color:var(--amber)">Swapped: '+chore+' needs two hands</div>'
-          :(displayChore?'<div class="chore-hint">'+(displayMeta&&displayMeta.noise===2?'\uD83D\uDD0A Noisy':displayMeta&&displayMeta.noise===0?'\uD83D\uDD07 Silent':'')+(displayMeta&&displayMeta.energy===2?' \u00b7 High energy':displayMeta&&displayMeta.energy===0?' \u00b7 Low energy':'')+'</div>':''))
-        +'</div>'
-        +'<button class="chore-tick '+(choreDone&&!isAlternate?'done':'')+'" onclick="toggleChoreDone()">'+(choreDone&&!isAlternate?'\u2713':'')+'</button>'
-        +'</div>';
-      h+='<div style="text-align:right;margin-top:-4px;margin-bottom:8px">'
-        +'<button onclick="toggleSurvivalMode()" style="background:none;border:none;font-size:11px;color:var(--subtle);cursor:pointer;font-family:\'Inter\',sans-serif">\uD83C\uDF11 Survival Mode</button>'
-        +'</div>';
-    }
-
-    // Wearing toggle on idle too (affects chore suggestions)
-    h+='<div class="wearing-bar '+(state.babyWearing?'active':'')+'" onclick="toggleWearing()">'
-      +'<span style="font-size:15px">\uD83E\uDD31</span>'
-      +'<span style="flex:1;font-size:13px;font-weight:600;color:'+(state.babyWearing?'var(--contact-col)':'var(--muted)')+'">Baby wearing</span>'
-      +'<div class="toggle-switch '+(state.babyWearing?'on':'off')+'"><div class="toggle-knob"></div></div>'
-      +'</div>';
-
-    // ── Stats row ───────────────────────────────────────────────
-    h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">'
-      +'<div class="sleep-stat"><div class="sleep-num" style="color:var(--purple)">'+(napTotal>0?fmtDur(napTotal):'\u2014')+'</div><div class="sleep-lbl">Naps</div></div>'
-      +'<div class="sleep-stat"><div class="sleep-num" style="color:var(--accent)">'+(overnight?fmtDur(overnight):'\u2014')+'</div><div class="sleep-lbl">Night</div></div>'
-      +'<div class="sleep-stat"><div class="sleep-num" style="color:var(--teal)">'+(totalSleep>0?fmtDur(totalSleep):'\u2014')+'</div><div class="sleep-lbl">Total</div></div>'
-      +'</div>';
-
-    // ── Wake + bed compact row ──────────────────────────────────
-    h+='<div style="display:flex;gap:8px;margin-bottom:10px">'
-      +'<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px">'
-      +'<div style="font-size:10px;color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px">\uD83C\uDF05 Woke</div>'
-      +'<input type="time" class="field-input" style="margin:0;padding:0;border:none;background:transparent;font-size:16px;font-weight:700;color:'+(state.wakeTime?'var(--amber)':'var(--subtle)')+'" '+(state.wakeTime?'value="'+state.wakeTime+'"':'')+' onchange="setWake(this.value)"></div>'
-      +'<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px">'
-      +'<div style="font-size:10px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px">\uD83C\uDF19 Bed</div>'
-      +'<input type="time" class="field-input" style="margin:0;padding:0;border:none;background:transparent;font-size:16px;font-weight:700;color:'+(state.bedTime?'var(--accent)':'var(--subtle)')+'" '+(state.bedTime?'value="'+state.bedTime+'"':'')+' onchange="setBed(this.value)"></div>'
-      +'</div>';
-
-    // ── Today's nap list — tap to expand ────────────────────────────
-    if (naps.length>0) {
-      var napListOpen = !!expandedDays['__today_naps__'];
-      h+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;cursor:pointer" onclick="toggleTodayNaps()">'
-        +'<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">Today\'s naps ('+naps.length+')</span>'
-        +'<span style="font-size:12px;color:var(--accent)">'+(napListOpen?'▲':'▼')+'</span>'
-        +'</div>';
-      if (napListOpen) {
-      h+='<div style="padding:0 14px 12px">';
-      naps.forEach(function(n,i){
-        var d=durMins(n.start,n.end);
-        h+='<div class="nap-item">'
-          +'<div class="nap-dot dot-'+n.type+'"></div>'
-          +'<div class="nap-time">'+fmtTime(n.start)+' \u2192 '+(n.end?fmtTime(n.end):'...')+'</div>'
-          +(d>0?'<div class="nap-dur">'+fmtDur(d)+'</div>':'')
-          +'<div class="nap-type">'+n.type+'</div>'
-          +'<button class="icon-btn" style="color:var(--accent)" onclick="editNap(\''+todayKey()+'\','+i+')">\u270e</button>'
-          +'<button class="icon-btn" style="color:var(--muted)" onclick="deleteNap(\''+todayKey()+'\','+i+')">×</button>'
-          +'</div>';
-      });
-      h+='</div>';
-      } // end napListOpen
-      h+='</div>'; // end collapsible wrapper
-    }
   }
 
   document.getElementById('tab-content').innerHTML=h;
+
+  if (ongoing&&document.getElementById('live-timer')) {
+    clearInterval(window._timerInterval);
+    window._timerInterval=setInterval(function(){
+      var el=document.getElementById('live-timer');
+      if (!el){clearInterval(window._timerInterval);return;}
+      el.textContent=fmtDurSecs(elapsedSecs(ongoing.start));
+    },1000);
+  } else {
+    clearInterval(window._timerInterval);
+  }
 }
 function renderPatterns() {
   var el = document.getElementById('tab-content');
@@ -1264,7 +1322,13 @@ function renderSettings() {
     +'</select></div>';
 
   document.getElementById('tab-content').innerHTML=
-    grp('parent-goal','My goal & sleep vibe',goalContent)
+    '<div style="background:#1a1410;border:1px solid #3a2a10;border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start">'
+    +'<span style="font-size:16px;flex-shrink:0">⚠️</span>'
+    +'<div style="font-size:13px;color:var(--amber);line-height:1.6"><strong>Your data is stored on this device only.</strong> '
+    +'Clearing your browser data or switching browsers will permanently delete all your nap history. '
+    +'Use the Export option below to back up your data before clearing anything.</div>'
+    +'</div>'
+    +grp('parent-goal','My goal & sleep vibe',goalContent)
     +grp('baby','Baby profile',babyContent)
     +grp('chores','Chore schedule',choreContent)
     +grp('safety','Safety checks',safetyContent)
@@ -1313,6 +1377,22 @@ function deleteNap(dateKey,index){
   state.days[dateKey].splice(index,1);
   if(!state.days[dateKey].length)delete state.days[dateKey];
   saveState();toast('Nap deleted');render();
+}
+
+function showTooltip(type) {
+  var box = document.getElementById('tooltip-box');
+  if (!box) return;
+  var tips = {
+    contact: '<strong>Contact nap</strong> — baby is asleep on you or being held. Your hands are busy but your phone is free. The app suggests things you can do one-handed.',
+    cot: '<strong>Cot / Pram nap</strong> — baby is asleep somewhere safe without you holding them. You\'re completely free to move around and get things done.'
+  };
+  if (box.style.display === 'block' && box.dataset.type === type) {
+    box.style.display = 'none';
+  } else {
+    box.innerHTML = tips[type] || '';
+    box.dataset.type = type;
+    box.style.display = 'block';
+  }
 }
 
 function toggleTodayNaps(){expandedDays['__today_naps__']=!expandedDays['__today_naps__'];render();}
