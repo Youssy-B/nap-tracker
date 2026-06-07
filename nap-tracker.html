@@ -169,10 +169,10 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 .gantt-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent); margin-bottom: 12px; }
 .gantt-axis { display: flex; justify-content: space-between; margin-bottom: 6px; padding-left: 36px; }
 .gantt-axis-label { font-size: 10px; color: var(--muted); }
-.gantt-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
-.gantt-day-label { font-size: 11px; font-weight: 600; color: var(--muted); width: 30px; flex-shrink: 0; text-align: right; }
-.gantt-track { flex: 1; height: 16px; background: var(--surface); border-radius: 4px; position: relative; overflow: hidden; }
-.gantt-seg { position: absolute; height: 100%; border-radius: 3px; opacity: 0.9; }
+.gantt-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.gantt-day-label { font-size: 12px; font-weight: 700; color: var(--muted); width: 32px; flex-shrink: 0; text-align: right; }
+.gantt-track { flex: 1; height: 20px; background: var(--surface); border-radius: 5px; position: relative; overflow: hidden; }
+.gantt-seg { position: absolute; height: 100%; border-radius: 4px; opacity: 0.9; }
 /* Stats 2x2 grid */
 .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
 .stat-tile { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
@@ -259,6 +259,10 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 .inline-btn-red { color: var(--red); }
 /* Survival Mode */
 .survival-banner { background: #2a1010; border: 1px solid var(--red); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.pwa-banner { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.pwa-banner-text { flex: 1; line-height: 1.4; }
+.pwa-banner-text strong { color: var(--text); }
+.pwa-banner-close { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 0; line-height: 1; font-family: 'Inter', sans-serif; flex-shrink: 0; }
 .survival-text { flex: 1; }
 .survival-title { font-size: 14px; font-weight: 700; color: var(--red); }
 .survival-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
@@ -299,6 +303,11 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 </style>
 </head>
 <body>
+<div id="pwa-banner" style="display:none" class="pwa-banner">
+  <span style="font-size:18px">📲</span>
+  <div class="pwa-banner-text"><strong>Add to your home screen</strong> for the best experience — tap the Share button then "Add to Home Screen"</div>
+  <button class="pwa-banner-close" onclick="dismissPwaBanner()">×</button>
+</div>
 <div id="welcome-screen" class="welcome-wrap" style="display:none"></div>
 <div class="app-header">
   <div class="header-row">
@@ -490,7 +499,7 @@ var formSelectedType = 'contact';
 var expandedDays = {};
 var patternsExpanded = false;
 var windowRoutesOpen = false;
-var expandedSettings = {'parent-goal':false, baby:false, chores:false, safety:false, data:false};
+var expandedSettings = {'my-profile':false, baby:false, chores:false, 'settings-adv':false};
 var lastSafetyCheckMins = 0;
 
 function todayKey() { return new Date().toISOString().split('T')[0]; }
@@ -614,7 +623,7 @@ function getContactSuggestion(napMins) {
     // Not enough time yet — show what's coming
     var upcoming = tasks[0];
     return {
-      label: 'Just starting…',
+      label: 'Settling in…',
       detail: goal.icon + ' ' + upcoming.label + ' unlocks at ' + upcoming.minMins + 'm',
       completed: [],
       next: upcoming
@@ -637,7 +646,7 @@ function getContactSuggestion(napMins) {
 function toast(msg) {
   var el=document.getElementById('toast');
   el.textContent=msg; el.classList.add('show');
-  setTimeout(function(){el.classList.remove('show');},2500);
+  setTimeout(function(){el.classList.remove('show');},5000);
 }
 
 function isSurvivalActive() {
@@ -742,7 +751,8 @@ function switchTab(tab, el) {
   currentTab=tab;
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   el.classList.add('active');
-  document.getElementById('fab').style.display=(tab==='today'||tab==='history')?'flex':'none';
+  var _ongoing=getTodayNaps().find(function(n){return n.start&&!n.end;});
+  document.getElementById('fab').style.display=(tab==='today'&&!_ongoing||tab==='history')?'flex':'none';
   render();
 }
 
@@ -761,16 +771,16 @@ function renderWelcome() {
   var name = state.babyProfile.name || '';
   var gender = state.babyProfile.gender || '';
   el.innerHTML =
-    '<div class="welcome-logo">🌙 Nap Tracker</div>'
+    '<div class="welcome-logo">✨ Nap Tracker</div>'
    +'<div class="welcome-title">Your nap window,<br>made useful.</div>'
    +'<div class="welcome-sub">Tells you the one best thing to do while your baby sleeps.</div>'
    +'<div class="welcome-field-label">Baby\'s name</div>'
-   +'<input id="welcome-name" class="welcome-input" type="text" placeholder="e.g. Leo" value="'+name+'" autocomplete="off" autocorrect="off" spellcheck="false">'
+   +'<input id="welcome-name" class="welcome-input" type="text" placeholder="e.g. Leo" value="'+name+'" autocomplete="off" autocorrect="off" spellcheck="false" oninput="saveWelcomeName(this.value)">'
    +'<div class="welcome-field-label">Gender</div>'
    +'<div class="welcome-gender-row">'
    +'<button class="welcome-gender-btn'+(gender==='boy'?' selected':'')+'" onclick="selectGender(\'boy\')">Boy</button>'
    +'<button class="welcome-gender-btn'+(gender==='girl'?' selected':'')+'" onclick="selectGender(\'girl\')">Girl</button>'
-   +'<button class="welcome-gender-btn'+(gender==='other'?' selected':'')+'" onclick="selectGender(\'other\')">Other</button>'
+   +'<button class="welcome-gender-btn'+(gender==='other'?' selected':'')+'" onclick="selectGender(\'other\')">Prefer not to say</button>'
    +'</div>'
    +'<div class="welcome-instruction">'
    +'<div class="welcome-instruction-row">'
@@ -782,6 +792,8 @@ function renderWelcome() {
    +'<div class="welcome-instruction-text">Tap <strong>End Nap</strong> when they wake<span>Your window suggestion appears straight away</span></div>'
    +'</div>'
    +'</div>'
+   +'<div style="background:#1a1410;border:1px solid #3a2a10;border-radius:12px;padding:10px 14px;margin-bottom:20px;font-size:12px;color:#c9a060;line-height:1.5">'
+   +'⚠️ Your data is saved on this device only. Add to your home screen for the best experience and to keep your data safe.</div>'
    +'<button class="welcome-btn" onclick="completeWelcome()">Let\'s go →</button>';
 }
 
@@ -792,13 +804,32 @@ function selectGender(g) {
 }
 
 function completeWelcome() {
+  // Read name from both the input and state (in case input lost focus)
   var nameInput = document.getElementById('welcome-name');
-  var name = nameInput ? nameInput.value.trim() : '';
-  if (!name) { nameInput.style.borderColor = 'var(--red)'; nameInput.focus(); return; }
+  var name = (nameInput ? nameInput.value.trim() : '') || state.babyProfile.name || '';
+  if (!name) {
+    if (nameInput) { nameInput.style.borderColor = 'var(--red)'; nameInput.focus(); }
+    return;
+  }
   state.babyProfile.name = name;
   state.onboarded = true;
   saveState();
-  toast('Welcome! Tap Start Nap when ' + name + ' goes down 🌙');
+  // Show welcome message as a persistent card on Home, not a fleeting toast
+  state._welcomeMsg = name;
+  render();
+}
+
+function saveWelcomeName(val) {
+  // Save name as user types so it's never lost
+  if (val && val.trim()) {
+    state.babyProfile.name = val.trim();
+    saveState();
+  }
+}
+
+function dismissWelcome() {
+  delete state._welcomeMsg;
+  saveState();
   render();
 }
 
@@ -821,6 +852,18 @@ function renderToday() {
   document.getElementById('app-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
   var h='';
 
+  // ── Persistent welcome card — shown on first visit only ──────
+  if (state._welcomeMsg) {
+    var wName = state._welcomeMsg;
+    h += '<div style="background:linear-gradient(135deg,#1a2030,#141820);border:1px solid var(--teal);border-radius:14px;padding:14px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
+      +'<div>'
+      +'<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Welcome! Ready for '+wName+'\'s naps \uD83D\uDC4B</div>'
+      +'<div style="font-size:13px;color:var(--muted);line-height:1.5">Tap a button when '+wName+' goes down.<br>Before bed, explore Profile to personalise the app.</div>'
+      +'</div>'
+      +'<button onclick="dismissWelcome()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0;line-height:1;flex-shrink:0">\xd7</button>'
+      +'</div>';
+  }
+
   if (isWindDown) {
     h+='<div class="night-card">'
       +'<div style="font-size:11px;color:var(--purple);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">\uD83C\uDF19 Night</div>'
@@ -832,25 +875,35 @@ function renderToday() {
     var col=typeColor(ongoing.type);
     var napClass='napping-'+ongoing.type;
     var elapsed=durMins(ongoing.start,nowStr());
+    var babyName=(state.babyProfile&&state.babyProfile.name)?state.babyProfile.name:'';
 
     h+='<div class="status-card '+napClass+'">'
       +'<div class="status-eyebrow" style="color:'+col+'"><span class="live-dot" style="background:'+col+'"></span>'
-      +({contact:'\uD83D\uDCF1 Contact',cot:'\uD83D\uDECC Cot / Pram',pram:'\uD83D\uDECC Cot / Pram'}[ongoing.type]||ongoing.type)+' nap in progress</div>'
+      +({contact:'\uD83D\uDCF1 Contact',cot:'\uD83D\uDECC Cot / Pram',pram:'\uD83D\uDECC Cot / Pram'}[ongoing.type]||ongoing.type)+(babyName?' \u00b7 '+babyName:'')+' nap in progress</div>'
       +'<div id="live-timer" style="font-size:52px;font-weight:800;letter-spacing:-2px;line-height:1;margin:12px 0;color:'+col+'">'+fmtDurSecs(secs)+'</div>'
       +'<div class="status-sub">Started '+fmtTime(ongoing.start)+'</div>'
       +'<button class="end-btn" onclick="endOngoingNap()">\u2713 End nap</button>'
       +'</div>';
 
     if (ongoing.type==='contact') {
-      var sug=getContactSuggestion(elapsed);
-      var nextHtml=sug.next?'<div style="font-size:11px;color:var(--muted);margin-top:4px">Next: '+sug.next.label+' at '+sug.next.minMins+'m</div>':'';
-      var compHtml=sug.completed&&sug.completed.length>0?'<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">\u2713 Done: '+sug.completed.map(function(t){return t.label;}).join(' \u00b7 ')+'</div>':'';
-      h+='<div class="suggestion suggestion-contact">'
-        +'<div style="width:100%"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
-        +'<div class="suggestion-text"><div class="suggestion-label">'+sug.label+'</div>'
-        +'<div class="suggestion-detail">'+sug.detail+'</div></div>'
-        +'<div class="suggestion-badge badge-rest" style="flex-shrink:0">\uD83D\uDCF1 Now</div></div>'
-        +nextHtml+compHtml+'</div></div>';
+      // Only show suggestion if user has explicitly set their goal in Profile
+      if (goalSet) {
+        var sug=getContactSuggestion(elapsed);
+        var nextHtml=sug.next?'<div style="font-size:11px;color:var(--muted);margin-top:4px">Next: '+sug.next.label+' at '+sug.next.minMins+'m</div>':'';
+        var compHtml=sug.completed&&sug.completed.length>0?'<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">\u2713 Done: '+sug.completed.map(function(t){return t.label;}).join(' \u00b7 ')+'</div>':'';
+        h+='<div class="suggestion suggestion-contact">'
+          +'<div style="width:100%"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
+          +'<div class="suggestion-text"><div class="suggestion-label">'+sug.label+'</div>'
+          +'<div class="suggestion-detail">'+sug.detail+'</div></div>'
+          +'<div class="suggestion-badge badge-rest" style="flex-shrink:0">\uD83D\uDCF1 Now</div></div>'
+          +nextHtml+compHtml+'</div></div>';
+      } else {
+        // Nudge to set goal in Profile
+        h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px">'
+          +'<div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Set your goal to get suggestions \u2192</div>'
+          +'<div style="font-size:13px;color:var(--muted)">Go to <strong style="color:var(--accent)">Profile</strong> and choose what you want to protect during nap time.</div>'
+          +'</div>';
+      }
     } else {
       if (everLoggedNap) {
         h+='<div class="wearing-bar '+(state.babyWearing?'active':'')+'\" onclick="toggleWearing()">'
@@ -888,6 +941,22 @@ function renderToday() {
           +'<div class="wake-avg">Avg<br>window<br><strong>'+fmtDur(avgWW)+'</strong></div>'
           +'</div>';
       }
+    } else if (everLoggedNap&&avgWW<=0) {
+      // Building average — not enough data yet
+      h+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--muted);line-height:1.5">'
+        +'\uD83D\uDCC8 Building your wake window average \u2014 log a couple more naps and it will appear here.</div>';
+    }
+
+    // First nap celebration
+    var todayDone = naps.filter(function(n){return n.end;});
+    var allDaysCount = Object.keys(state.days).length;
+    if (todayDone.length===1 && allDaysCount<=1) {
+      var celebName = (state.babyProfile&&state.babyProfile.name)?state.babyProfile.name:'your baby';
+      h+='<div style="background:linear-gradient(135deg,#122a22,#0e1e18);border:1px solid var(--teal);border-radius:14px;padding:14px 16px;margin-bottom:10px;text-align:center">'
+        +'<div style="font-size:22px;margin-bottom:6px">\uD83C\uDF89</div>'
+        +'<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">First nap logged!</div>'
+        +'<div style="font-size:13px;color:var(--muted);line-height:1.5">Keep logging and the app learns '+celebName+'\'s rhythm. Patterns unlock after a few days.</div>'
+        +'</div>';
     }
 
     h+='<div class="nap-btns">'
@@ -916,7 +985,7 @@ function renderToday() {
     if (!everLoggedNap) {
       var babyName = (state.babyProfile && state.babyProfile.name) ? state.babyProfile.name : 'your baby';
       h += '<div style="border:1px dashed var(--border);border-radius:14px;padding:20px 16px;text-align:center;margin-top:8px">'
-        +'<div style="font-size:28px;margin-bottom:10px">🌙</div>'
+        +'<div style="font-size:28px;margin-bottom:10px">👶</div>'
         +'<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Ready when '+babyName+' naps</div>'
         +'<div style="font-size:13px;color:var(--muted);line-height:1.7">Tap a button above the moment<br>'+babyName+' goes down to start.</div>'
         +'</div>';
@@ -998,9 +1067,21 @@ function renderPatterns() {
   var el = document.getElementById('tab-content');
   var allDays = Object.entries(state.days).sort(function(a,b){ return b[0].localeCompare(a[0]); });
   var dayCount = allDays.length;
+  var goal = PARENT_GOALS.find(function(g){ return g.id===state.parentGoal; }) || PARENT_GOALS[0];
+  var vibe = SLEEP_VIBES.find(function(v){ return v.id===state.sleepVibe; }) || SLEEP_VIBES[1];
 
+  // Empty state — show what's coming
   if (dayCount < 2) {
-    el.innerHTML = '<div class="empty">Log a few days of naps<br>and patterns will appear here.</div>';
+    el.innerHTML = '<div class="empty">'
+      + '<div style="font-size:28px;margin-bottom:12px">📈</div>'
+      + '<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Patterns unlock as you log</div>'
+      + '<div style="font-size:13px;color:var(--muted);line-height:1.7;max-width:260px;margin:0 auto">'
+      + 'After a few days you\'ll see:<br>'
+      + '· Average nap length<br>'
+      + '· Best time of day for your goal<br>'
+      + '· Your most reliable free window'
+      + '</div>'
+      + '</div>';
     return;
   }
 
@@ -1010,30 +1091,42 @@ function renderPatterns() {
   var avgPerDay = (allNaps.length / allDays.length).toFixed(1);
   var avgWW = getAvgWakeWindow();
   var contactPct = allNaps.length > 0 ? Math.round(allNaps.filter(function(n){ return n.type==='contact'; }).length / allNaps.length * 100) : 0;
+  var cotPct = 100 - contactPct;
 
-  // Progressive tiers based on days logged
   var showGantt      = dayCount >= 14;
   var showPrediction = dayCount >= 7;
   var showGaps       = dayCount >= 7;
 
   var h = '';
 
-  // ── Tier progress nudge ──────────────────────────────────────
+  // ── Tier progress nudge — warm and goal-specific ──────────────
   if (!showPrediction) {
     var daysLeft = 7 - dayCount;
-    h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--muted);line-height:1.5">'
-      + '📈 Log <strong style="color:var(--text)">' + daysLeft + ' more day' + (daysLeft===1?'':'s') + '</strong> to unlock your personalised prediction window.</div>';
+    h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px">'
+      + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">📈 Building your picture</div>'
+      + '<div style="font-size:13px;color:var(--muted);line-height:1.5">Log <strong style="color:var(--text)">' + daysLeft + ' more day' + (daysLeft===1?'':'s') + '</strong> and we\'ll predict your best window for <strong style="color:var(--accent)">' + goal.label + '</strong> tomorrow.</div>'
+      + '<div style="margin-top:10px;background:var(--border);border-radius:4px;height:4px">'
+      + '<div style="background:var(--teal);height:4px;border-radius:4px;width:' + Math.round(dayCount/7*100) + '%"></div>'
+      + '</div>'
+      + '<div style="font-size:11px;color:var(--muted);margin-top:4px">' + dayCount + ' of 7 days</div>'
+      + '</div>';
   } else if (!showGantt) {
     var daysLeft2 = 14 - dayCount;
-    h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--muted);line-height:1.5">'
-      + '🗺️ <strong style="color:var(--text)">' + daysLeft2 + ' more day' + (daysLeft2===1?'':'s') + '</strong> until your 14-day sleep map unlocks.</div>';
+    h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px">'
+      + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">🗺️ Sleep map coming</div>'
+      + '<div style="font-size:13px;color:var(--muted);line-height:1.5"><strong style="color:var(--text)">' + daysLeft2 + ' more day' + (daysLeft2===1?'':'s') + '</strong> until your 14-day visual sleep map unlocks.</div>'
+      + '<div style="margin-top:10px;background:var(--border);border-radius:4px;height:4px">'
+      + '<div style="background:var(--teal);height:4px;border-radius:4px;width:' + Math.round(dayCount/14*100) + '%"></div>'
+      + '</div>'
+      + '<div style="font-size:11px;color:var(--muted);margin-top:4px">' + dayCount + ' of 14 days</div>'
+      + '</div>';
   }
 
-  // ── 7-day Gantt — only after 14 days ─────────────────────────
+  // ── Gantt map — after 14 days ─────────────────────────────────
   if (showGantt) {
     var last7 = allDays.slice(0, 7).reverse();
     var DAY_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    var T_START = 6 * 60, T_END = 23 * 60, T_SPAN = T_END - T_START;
+    var T_START = 6*60, T_END = 23*60, T_SPAN = T_END - T_START;
     var axisLabels = ['6am','9am','12pm','3pm','6pm','9pm'];
 
     h += '<div class="gantt-wrap">';
@@ -1044,22 +1137,22 @@ function renderPatterns() {
     });
     h += '</div>';
     last7.forEach(function(entry) {
-      var date = entry[0], naps = entry[1];
-      var d = new Date(date+'T12:00:00');
-      var dayLabel = DAY_SHORT[d.getDay()];
-      var isToday = date === todayKey();
+      var date=entry[0], naps=entry[1];
+      var d=new Date(date+'T12:00:00');
+      var dayLabel=DAY_SHORT[d.getDay()];
+      var isToday=date===todayKey();
       h += '<div class="gantt-row">';
       h += '<div class="gantt-day-label" style="color:'+(isToday?'var(--accent)':'var(--muted)')+'">'+dayLabel+'</div>';
       h += '<div class="gantt-track">';
       naps.forEach(function(n) {
         if (!n.start) return;
-        var sp = n.start.split(':').map(Number);
-        var sMins = sp[0]*60+sp[1] - T_START;
-        var ep = n.end ? n.end.split(':').map(Number) : null;
-        var eMins = ep ? ep[0]*60+ep[1] - T_START : sMins + 45;
-        var left = Math.max(0, sMins / T_SPAN * 100);
-        var width = Math.min(100 - left, Math.max(1, (eMins - sMins) / T_SPAN * 100));
-        var col = {contact:'var(--contact-col)', cot:'var(--cot-col)', pram:'var(--pram-col)'}[n.type] || 'var(--accent)';
+        var sp=n.start.split(':').map(Number);
+        var sMins=sp[0]*60+sp[1]-T_START;
+        var ep=n.end?n.end.split(':').map(Number):null;
+        var eMins=ep?ep[0]*60+ep[1]-T_START:sMins+45;
+        var left=Math.max(0, sMins/T_SPAN*100);
+        var width=Math.min(100-left, Math.max(2, (eMins-sMins)/T_SPAN*100));
+        var col={contact:'var(--contact-col)',cot:'var(--cot-col)',pram:'var(--pram-col)'}[n.type]||'var(--accent)';
         h += '<div class="gantt-seg" style="left:'+left+'%;width:'+width+'%;background:'+col+'"></div>';
       });
       h += '</div></div>';
@@ -1071,107 +1164,124 @@ function renderPatterns() {
     h += '</div></div>';
   }
 
-  // ── Stats 2×2 — always shown ─────────────────────────────────
-  var startHours = done.map(function(n){ return parseInt(n.start.split(':')[0]); });
-  var hourFreq = {};
-  startHours.forEach(function(hr){ hourFreq[hr] = (hourFreq[hr]||0)+1; });
-  var peakHour = Object.keys(hourFreq).sort(function(a,b){ return hourFreq[b]-hourFreq[a]; })[0];
-  var peakHourFmt = peakHour ? fmtTime(pad(peakHour)+':00') : '—';
+  // ── Stats 2x2 ─────────────────────────────────────────────────
+  var startHours=done.map(function(n){return parseInt(n.start.split(':')[0]);});
+  var hourFreq={};
+  startHours.forEach(function(hr){hourFreq[hr]=(hourFreq[hr]||0)+1;});
+  var peakHour=Object.keys(hourFreq).sort(function(a,b){return hourFreq[b]-hourFreq[a];})[0];
+  var peakHourFmt=peakHour?fmtTime(pad(peakHour)+':00'):'\u2014';
 
   h += '<div class="stats-grid">';
   h += '<div class="stat-tile"><div class="stat-tile-label">Avg naps/day</div><div class="stat-tile-value" style="color:var(--accent)">'+avgPerDay+'</div><div class="stat-tile-sub">blocks</div></div>';
   h += '<div class="stat-tile"><div class="stat-tile-label">Avg nap length</div><div class="stat-tile-value" style="color:var(--teal)">'+fmtDur(avgDur)+'</div><div class="stat-tile-sub">per nap</div></div>';
-  h += '<div class="stat-tile"><div class="stat-tile-label">Common start</div><div class="stat-tile-value" style="color:var(--amber);font-size:20px">'+peakHourFmt+'</div><div class="stat-tile-sub">most frequent</div></div>';
-  h += '<div class="stat-tile"><div class="stat-tile-label">Wake window avg</div><div class="stat-tile-value" style="color:var(--purple);font-size:20px">'+fmtDur(avgWW)+'</div><div class="stat-tile-sub">between naps</div></div>';
+  h += '<div class="stat-tile"><div class="stat-tile-label">First nap usually</div><div class="stat-tile-value" style="color:var(--amber);font-size:20px">'+peakHourFmt+'</div><div class="stat-tile-sub">most frequent</div></div>';
+  h += '<div class="stat-tile"><div class="stat-tile-label">Between naps</div><div class="stat-tile-value" style="color:var(--purple);font-size:20px">'+fmtDur(avgWW)+'</div><div class="stat-tile-sub">avg awake time</div></div>';
   h += '</div>';
 
-  // ── Prediction — after 7 days ─────────────────────────────────
+  // ── Prediction — after 7 days, goal-aware nap type ────────────
   if (showPrediction) {
-    var goal = PARENT_GOALS.find(function(g){ return g.id === state.parentGoal; }) || PARENT_GOALS[0];
-    var vibe = SLEEP_VIBES.find(function(v){ return v.id === state.sleepVibe; }) || SLEEP_VIBES[1];
-    var contactCount = done.filter(function(n){ return n.type==='contact'; }).length;
-    var cotCount     = done.filter(function(n){ return n.type==='cot'||n.type==='pram'; }).length;
-    var likelyType   = cotCount >= contactCount ? 'Cot' : 'Contact';
-    var predTimeStr  = peakHour ? fmtTime(pad(peakHour)+':00') : '—';
-    var confidence   = vibe.id === 'predictable' ? 'High confidence' : vibe.id === 'chaos' ? 'Estimate — naps vary a lot' : 'Low confidence — regression phase';
+    // Match goal to realistic nap type
+    // Fitness/workout needs Cot (hands free). Rest/study/work/creative fine on Contact
+    var goalNeedsFreehands = (goal.id==='fitness');
+    var contactCount=done.filter(function(n){return n.type==='contact';}).length;
+    var cotCount=done.filter(function(n){return n.type==='cot'||n.type==='pram';}).length;
+
+    var likelyType, likelyLabel;
+    if (goalNeedsFreehands) {
+      // For fitness always suggest Cot window
+      likelyType = 'Cot / Pram';
+      likelyLabel = 'a Cot / Pram nap (you\'ll need both hands free)';
+    } else if (contactCount >= cotCount) {
+      likelyType = 'Contact';
+      likelyLabel = 'a Contact nap';
+    } else {
+      likelyType = 'Cot / Pram';
+      likelyLabel = 'a Cot / Pram nap';
+    }
+
+    var predTimeStr = peakHour ? fmtTime(pad(peakHour)+':00') : '\u2014';
+    var confidence = vibe.id==='predictable' ? 'High confidence'
+      : vibe.id==='chaos' ? 'Low confidence \u2014 naps vary a lot'
+      : 'Low confidence \u2014 regression phase';
 
     h += '<div class="prediction-card">';
-    h += '<div class="prediction-eyebrow">💡 Prediction — based on '+dayCount+' days</div>';
-    h += '<div class="prediction-body">Your best window for <strong>'+goal.label+'</strong> tomorrow is predicted around <strong>'+predTimeStr+'</strong> during a '+likelyType+' nap.</div>';
+    h += '<div class="prediction-eyebrow">\uD83D\uDCA1 Based on ' + dayCount + ' days</div>';
+    h += '<div class="prediction-body">Your best window for <strong>' + goal.label + '</strong> tomorrow is likely around <strong>' + predTimeStr + '</strong> during ' + likelyLabel + '.</div>';
     h += '<div class="prediction-stats">';
-    h += '<div class="prediction-stat">📊 Naps/day: <strong>'+avgPerDay+'</strong></div>';
-    h += '<div class="prediction-stat">⏱ Avg stay: <strong>'+fmtDur(avgDur)+'</strong></div>';
-    h += '<div class="prediction-stat">🎯 <strong>'+confidence+'</strong></div>';
+    h += '<div class="prediction-stat">\uD83D\uDCCA Avg naps: <strong>' + avgPerDay + '</strong></div>';
+    h += '<div class="prediction-stat">\u23F1 Avg length: <strong>' + fmtDur(avgDur) + '</strong></div>';
+    h += '<div class="prediction-stat">\uD83C\uDFAF <strong>' + confidence + '</strong></div>';
     h += '</div></div>';
   }
 
-  // ── Gaps — after 7 days, with plain-English explanations ─────
+  // ── Gaps — after 7 days, plain English ───────────────────────
   if (showGaps) {
-    var goal2 = PARENT_GOALS.find(function(g){ return g.id === state.parentGoal; }) || PARENT_GOALS[0];
     var gaps = [];
 
+    // Morning window — time from wake to first nap, described simply
     var firstNapMins = done.length > 0
-      ? Math.round(done.map(function(n){ return parseInt(n.start.split(':')[0])*60+parseInt(n.start.split(':')[1]); })
-          .reduce(function(a,b){ return a+b; }, 0) / done.length)
+      ? Math.round(done.map(function(n){
+          return parseInt(n.start.split(':')[0])*60 + parseInt(n.start.split(':')[1]);
+        }).reduce(function(a,b){return a+b;},0) / done.length)
       : null;
 
     if (firstNapMins) {
-      var wakeBase = state.wakeTime ? (parseInt(state.wakeTime.split(':')[0])*60+parseInt(state.wakeTime.split(':')[1])) : 7*60;
+      var wakeBase = state.wakeTime
+        ? parseInt(state.wakeTime.split(':')[0])*60 + parseInt(state.wakeTime.split(':')[1])
+        : 7*60;
       var morningGap = firstNapMins - wakeBase;
-      if (morningGap >= 30) {
-        var midMins = Math.round(wakeBase + morningGap/2);
-        var midHr = Math.floor(midMins/60), midMin = midMins%60;
-        var wakeStr = state.wakeTime ? fmtTime(state.wakeTime) : '7:00am';
+      if (morningGap >= 20) {
+        var morningStr = fmtDur(Math.round(morningGap));
+        var wakeStr = state.wakeTime ? fmtTime(state.wakeTime) : 'wake up';
         gaps.push({
-          icon: '🌅',
-          name: 'Morning window ('+fmtDur(morningGap)+')',
-          detail: 'From when you wake ('+wakeStr+') until the first nap. Your quietest, most reliable window — best for focus tasks.',
-          type: 'focus',
-          badge: 'BEST FOCUS\nWINDOW',
+          icon: '\uD83C\uDF05',
+          name: 'Free window before first nap',
+          detail: 'You usually have about ' + morningStr + ' after ' + wakeStr + ' before the first nap starts. Your most reliable window of the day.',
           badgeCls: 'gap-badge-focus',
-          cardCls: 'gap-card-focus'
+          cardCls: 'gap-card-focus',
+          badge: 'BEST\nWINDOW'
         });
       }
     }
 
+    // Afternoon variability — only if genuinely erratic
     if (done.length >= 4) {
-      var startMinsArr = done.map(function(n){ return parseInt(n.start.split(':')[0])*60+parseInt(n.start.split(':')[1]); });
-      var mean = startMinsArr.reduce(function(a,b){ return a+b; }, 0) / startMinsArr.length;
-      var variance = startMinsArr.reduce(function(a,b){ return a+Math.pow(b-mean,2); }, 0) / startMinsArr.length;
-      var stdDev = Math.round(Math.sqrt(variance));
-
-      if (stdDev > 20) {
+      var startMinsArr=done.map(function(n){return parseInt(n.start.split(':')[0])*60+parseInt(n.start.split(':')[1]);});
+      var mean=startMinsArr.reduce(function(a,b){return a+b;},0)/startMinsArr.length;
+      var variance=startMinsArr.reduce(function(a,b){return a+Math.pow(b-mean,2);},0)/startMinsArr.length;
+      var stdDev=Math.round(Math.sqrt(variance));
+      if (stdDev > 25) {
         gaps.push({
-          icon: '🌇',
-          name: 'Afternoon naps vary (±'+fmtDur(stdDev)+')',
-          detail: 'Afternoon nap start times vary by about '+fmtDur(stdDev)+' day to day. Keep tasks short and interruptible during this window.',
-          type: 'quick',
-          badge: 'QUICK\nTASKS',
+          icon: '\uD83C\uDF07',
+          name: 'Nap times vary day to day',
+          detail: 'Naps don\'t start at a consistent time yet. Keep tasks short and easy to put down during the afternoon \u2014 the window might close sooner than expected.',
           badgeCls: 'gap-badge-quick',
-          cardCls: 'gap-card-quick'
+          cardCls: 'gap-card-quick',
+          badge: 'STAY\nFLEXIBLE'
         });
       }
     }
 
+    // Goal-linked contact nap opportunity
     if (contactPct >= 40) {
+      var contactStr = contactPct + '% of ' + (state.babyProfile&&state.babyProfile.name?state.babyProfile.name+'\'s':'') + ' naps are contact naps';
       gaps.push({
-        icon: goal2.icon,
-        name: goal2.label+' via Contact ('+contactPct+'% of naps)',
-        detail: contactPct+'% of naps are contact naps. During these you\'re hands-busy but phone-free — ideal for '+goal2.label.toLowerCase()+' tasks you can do one-handed.',
-        type: 'rest',
-        badge: goal2.icon+'\nGOAL',
+        icon: goal.icon,
+        name: goal.label + ' one-handed',
+        detail: contactStr + '. These are great for phone-based ' + goal.label.toLowerCase() + ' tasks \u2014 you\'re holding the baby but your mind is free.',
         badgeCls: 'gap-badge-rest',
-        cardCls: 'gap-card-rest'
+        cardCls: 'gap-card-rest',
+        badge: goal.icon+'\nGOAL'
       });
     }
 
     if (gaps.length > 0) {
-      h += '<div class="gaps-title">💡 Your recurring windows</div>';
+      h += '<div class="gaps-title">\uD83D\uDCA1 Your recurring windows</div>';
       gaps.forEach(function(g) {
-        h += '<div class="gap-card '+g.cardCls+'">';
-        h += '<div class="gap-card-left"><div class="gap-card-name">'+g.icon+' '+g.name+'</div>';
-        h += '<div class="gap-card-detail">'+g.detail+'</div></div>';
-        h += '<div class="gap-card-badge '+g.badgeCls+'">'+g.badge.replace('\n','<br>')+'</div>';
+        h += '<div class="gap-card ' + g.cardCls + '">';
+        h += '<div class="gap-card-left"><div class="gap-card-name">' + g.icon + ' ' + g.name + '</div>';
+        h += '<div class="gap-card-detail">' + g.detail + '</div></div>';
+        h += '<div class="gap-card-badge ' + g.badgeCls + '">' + g.badge.replace('\n','<br>') + '</div>';
         h += '</div>';
       });
     }
@@ -1184,156 +1294,213 @@ function renderHistory() {
   var allDays=Object.entries(state.days).sort(function(a,b){return b[0].localeCompare(a[0]);});
   var el=document.getElementById('tab-content');
   if (!allDays.length){el.innerHTML='<div class="empty">No history yet.<br>Start logging today!</div>';return;}
-  var h='';
+
+  function getWeekKey(dateStr) {
+    var d=new Date(dateStr+'T12:00:00');
+    var day=d.getDay();
+    var diff=d.getDate()-day+(day===0?-6:1);
+    var mon=new Date(d.setDate(diff));
+    return mon.toISOString().split('T')[0];
+  }
+
+  var weeks={};
   allDays.forEach(function(entry){
-    var date=entry[0], naps=entry[1];
-    var sorted=naps.slice().sort(function(a,b){return a.start.localeCompare(b.start);});
-    var total=sorted.reduce(function(a,n){return a+durMins(n.start,n.end);},0);
-    var d=new Date(date);
-    var isToday=date===todayKey();
-    var isOpen=date===todayKey()||!!expandedDays[date];
-    h+='<div class="history-day">'
-      +'<div class="history-day-header" onclick="toggleDay(\''+date+'\')">'
-      +'<div><div class="history-day-title">'+(isToday?'Today':d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'}))+'</div>'
-      +'<div class="history-day-meta">'+sorted.length+' nap'+(sorted.length!==1?'s':'')+' \u00b7 '+fmtDur(total)+'</div></div>'
-      +'<span class="history-day-chevron">'+(isOpen?'\u25b2':'\u25bc')+'</span></div>'
-      +'<div class="history-day-body '+(isOpen?'open':'')+'">'
-      +'<div class="day-bar">';
-    sorted.forEach(function(n){
-      if(!n.end)return;
-      var sp=n.start.split(':').map(Number);
-      var s=Math.max(0,((sp[0]*60+sp[1])-7*60)/780*100);
-      var w=Math.min(100-s,durMins(n.start,n.end)/780*100);
-      h+='<div class="bar-seg" style="left:'+s+'%;width:'+w+'%;background:'+({contact:'#b09fec',cot:'#5ecfb0',pram:'#f0b96b'}[n.type]||'#888')+'"></div>';
-    });
+    var wk=getWeekKey(entry[0]);
+    if (!weeks[wk]) weeks[wk]=[];
+    weeks[wk].push(entry);
+  });
+
+  var weekKeys=Object.keys(weeks).sort(function(a,b){return b.localeCompare(a);});
+  var h='';
+
+  weekKeys.forEach(function(wk){
+    var days=weeks[wk];
+    var isCurrentWeek=getWeekKey(todayKey())===wk;
+    var weekOpen=isCurrentWeek||!!expandedDays['week_'+wk];
+    var weekNaps=days.reduce(function(a,b){return a.concat(b[1]);}, []);
+    var weekTotal=weekNaps.reduce(function(a,n){return a+(n.start&&n.end?durMins(n.start,n.end):0);},0);
+    var weekNapCount=weekNaps.filter(function(n){return n.end;}).length;
+    var wkDate=new Date(wk+'T12:00:00');
+    var endDate=new Date(wk+'T12:00:00'); endDate.setDate(endDate.getDate()+6);
+    var wkLabel=isCurrentWeek?'This week':wkDate.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' \u2013 '+endDate.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+
+    h+='<div class="history-day" style="margin-bottom:8px">'
+      +'<div class="history-day-header" onclick="toggleDay(\'week_'+wk+'\')">'
+      +'<div><div class="history-day-title">'+wkLabel+'</div>'
+      +'<div class="history-day-meta">'+weekNapCount+' nap'+(weekNapCount!==1?'s':'')+' \u00b7 '+fmtDur(weekTotal)+'</div>'
+      +'</div><span class="history-day-chevron">'+(weekOpen?'\u25b2':'\u25bc')+'</span>'
+      +'</div>';
+
+    if (weekOpen) {
+      h+='<div class="history-day-body open">';
+      days.forEach(function(entry){
+        var date=entry[0], dayNaps=entry[1];
+        var isToday=date===todayKey();
+        var sorted=dayNaps.slice().sort(function(a,b){return a.start.localeCompare(b.start);});
+        var total=sorted.reduce(function(a,n){return a+durMins(n.start,n.end);},0);
+        var d=new Date(date+'T12:00:00');
+        var dayLabel=isToday?'Today':d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'});
+        var dayOpen=isToday||!!expandedDays['day_'+date];
+
+        h+='<div style="border-top:1px solid var(--border);padding:8px 0">'
+          +'<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:4px 0" onclick="toggleDay(\'day_'+date+'\')">'
+          +'<div><div style="font-size:13px;font-weight:600;color:'+(isToday?'var(--teal)':'var(--text)')+'">'+dayLabel+'</div>'
+          +'<div style="font-size:11px;color:var(--muted)">'+sorted.length+' nap'+(sorted.length!==1?'s':'')+' \u00b7 '+fmtDur(total)+'</div>'
+          +'</div><span style="font-size:10px;color:var(--muted)">'+(dayOpen?'\u25b2':'\u25bc')+'</span>'
+          +'</div>';
+
+        if (dayOpen) {
+          sorted.forEach(function(n,i){
+            var dur=durMins(n.start,n.end);
+            h+='<div class="nap-item">'
+              +'<div class="nap-dot dot-'+n.type+'"></div>'
+              +'<div class="nap-time">'+fmtTime(n.start)+' \u2192 '+(n.end?fmtTime(n.end):'...')+'</div>'
+              +(dur>0?'<div class="nap-dur">'+fmtDur(dur)+'</div>':'')
+              +'<div class="nap-type">'+n.type+'</div>'
+              +'<button class="icon-btn" style="color:var(--accent)" onclick="editNap(\''+date+'\','+i+')">\u270e</button>'
+              +'<button class="icon-btn" style="color:var(--muted)" onclick="deleteNap(\''+date+'\','+i+')">\xd7</button>'
+              +'</div>';
+          });
+        }
+        h+='</div>';
+      });
+      h+='</div>';
+    }
     h+='</div>';
-    sorted.forEach(function(n,i){
-      var d2=durMins(n.start,n.end);
-      h+='<div class="history-nap">'
-        +'<div style="width:8px;height:8px;border-radius:50%;background:'+typeColor(n.type)+';flex-shrink:0"></div>'
-        +'<span>'+fmtTime(n.start)+(n.end?' \u2192 '+fmtTime(n.end):' (ongoing)')+'</span>'
-        +(d2>0?'<span style="color:var(--accent)">'+fmtDur(d2)+'</span>':'')
-        +'<span style="color:var(--muted)">'+n.type+'</span>'
-        +'<div style="display:flex;gap:4px;margin-left:auto">'
-        +'<button class="inline-btn inline-btn-blue" onclick="editNap(\''+date+'\','+i+')">\u270e</button>'
-        +'<button class="inline-btn inline-btn-red" onclick="deleteNap(\''+date+'\','+i+')">\xd7</button>'
-        +'</div></div>';
-    });
-    h+='</div></div>';
   });
   el.innerHTML=h;
 }
 
 function renderSettings() {
-  var cfg=state.choreConfig;
-  var napCount=Object.values(state.days).reduce(function(a,n){return a+n.length;},0);
-  var dayCount=Object.keys(state.days).length;
-  var dayOpts=DAY_NAMES.map(function(d,i){return '<option value="'+i+'" '+(cfg.binDay===i?'selected':'')+'>'+d+'</option>';}).join('');
-  var shopOpts=DAY_NAMES.map(function(d,i){return '<option value="'+i+'" '+(cfg.shoppingDay===i?'selected':'')+'>'+d+'</option>';}).join('');
-  var restOpts='<option value="null" '+(cfg.restDay===null||cfg.restDay===undefined?'selected':'')+'>No rest day</option>'
-    +DAY_NAMES.map(function(d,i){return '<option value="'+i+'" '+(cfg.restDay===i?'selected':'')+'>'+d+'</option>';}).join('');
+  var cfg = state.choreConfig;
+  var napCount = Object.values(state.days).reduce(function(a,n){return a+n.length;},0);
+  var dayCount = Object.keys(state.days).length;
+  var bp = state.babyProfile || defaultState().babyProfile;
+  var sc = state.safetyCheck || defaultState().safetyCheck;
+  var dayOpts = DAY_NAMES.map(function(d,i){return '<option value="'+i+'" '+(cfg.binDay===i?'selected':'')+'>'+d+'</option>';}).join('');
+  var shopOpts = DAY_NAMES.map(function(d,i){return '<option value="'+i+'" '+(cfg.shoppingDay===i?'selected':'')+'>'+d+'</option>';}).join('');
+  var restOpts = '<option value="null" '+(cfg.restDay===null||cfg.restDay===undefined?'selected':'')+'>No rest day</option>'
+    + DAY_NAMES.map(function(d,i){return '<option value="'+i+'" '+(cfg.restDay===i?'selected':'')+'>'+d+'</option>';}).join('');
 
-  function grp(id,title,content){
-    var open=!!expandedSettings[id];
-    return '<div class="settings-group">'
-      +'<div class="settings-group-header" onclick="toggleSettingsGroup(\''+id+'\')">'
-      +'<span class="settings-group-title">'+title+'</span>'
-      +'<span style="font-size:12px;color:var(--accent)">'+(open?'\u25b2':'\u25bc')+'</span></div>'
-      +'<div class="settings-group-body '+(open?'open':'')+'">'+(open?content:'')+'</div></div>';
+  // Completion indicators
+  var goalDone = state.parentGoal && state.parentGoal !== 'rest' || state.sleepVibe !== 'chaos';
+  var babyDone = !!(bp.name);
+  var choresDone = cfg.binDay !== null || cfg.shoppingDay !== null;
+
+  function dot(done) {
+    return done
+      ? '<span style="font-size:10px;color:var(--teal);margin-left:6px">\u2713</span>'
+      : '<span style="font-size:8px;color:var(--muted);margin-left:6px">\u25cf</span>';
   }
 
-  var bp=state.babyProfile||defaultState().babyProfile;
-  var sc=state.safetyCheck||defaultState().safetyCheck;
+  function grp(id, title, content, isDone) {
+    var open = !!expandedSettings[id];
+    return '<div class="settings-group">'
+      + '<div class="settings-group-header" onclick="toggleSettingsGroup(\''+id+'\')">'
+      + '<span class="settings-group-title">'+title+dot(isDone)+'</span>'
+      + '<span style="font-size:12px;color:var(--accent)">'+(open?'\u25b2':'\u25bc')+'</span>'
+      + '</div>'
+      + '<div class="settings-group-body '+(open?'open':'')+'">'+( open?content:'')+'</div>'
+      + '</div>';
+  }
 
-  var goalContent='<div style="padding:14px"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:10px">What\'s your primary goal right now?</div>'
-    +PARENT_GOALS.map(function(g){
-      var active=state.parentGoal===g.id;
-      return '<div onclick="saveParentGoal(\''+g.id+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;margin-bottom:6px;cursor:pointer;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'#1a2a3a':'var(--card2)')+';">'
-        +'<span style="font-size:20px">'+g.icon+'</span>'
-        +'<span style="font-size:14px;font-weight:'+(active?'700':'500')+';color:'+(active?'var(--text)':'var(--muted)')+'">'+g.label+'</span>'
-        +(active?'<span style="margin-left:auto;font-size:12px;color:var(--accent)">✓</span>':'')
-        +'</div>';
-    }).join('')
-    +'<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin:14px 0 10px">Current sleep vibe</div>'
-    +SLEEP_VIBES.map(function(v){
-      var active=state.sleepVibe===v.id;
-      return '<div onclick="saveSleepVibe(\''+v.id+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;margin-bottom:6px;cursor:pointer;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'#1a2a3a':'var(--card2)')+';">'
-        +'<span style="font-size:18px">'+v.icon+'</span>'
-        +'<div style="flex:1"><div style="font-size:14px;font-weight:'+(active?'700':'500')+';color:'+(active?'var(--text)':'var(--muted)')+'">'+v.label+'</div>'
-        +(active?'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+v.insight+'</div>':'')
-        +'</div>'
-        +(active?'<span style="font-size:12px;color:var(--accent)">✓</span>':'')
-        +'</div>';
-    }).join('')
-    +'</div>';
+  // ── 1. MY PROFILE ─────────────────────────────────────────────
+  var profileContent = '<div style="padding:14px">'
+    + '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:10px">What\'s your main goal right now?</div>'
+    + PARENT_GOALS.map(function(g) {
+        var active = state.parentGoal === g.id;
+        return '<div onclick="saveParentGoal(\''+g.id+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;margin-bottom:6px;cursor:pointer;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'#1a2a3a':'var(--card2)')+';">'
+          + '<span style="font-size:20px">'+g.icon+'</span>'
+          + '<span style="font-size:14px;font-weight:'+(active?'700':'500')+';color:'+(active?'var(--text)':'var(--muted)')+'">'+g.label+'</span>'
+          + (active ? '<span style="margin-left:auto;font-size:14px;color:var(--teal)">\u2713</span>' : '')
+          + '</div>';
+      }).join('')
+    + '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin:16px 0 10px">How are naps going right now?</div>'
+    + SLEEP_VIBES.map(function(v) {
+        var active = state.sleepVibe === v.id;
+        return '<div onclick="saveSleepVibe(\''+v.id+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;margin-bottom:6px;cursor:pointer;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'#1a2a3a':'var(--card2)')+';">'
+          + '<span style="font-size:18px">'+v.icon+'</span>'
+          + '<div style="flex:1"><div style="font-size:14px;font-weight:'+(active?'700':'500')+';color:'+(active?'var(--text)':'var(--muted)')+'">'+v.label+'</div>'
+          + (active ? '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+v.insight+'</div>' : '')
+          + '</div>'
+          + (active ? '<span style="font-size:14px;color:var(--teal)">\u2713</span>' : '')
+          + '</div>';
+      }).join('')
+    + '</div>';
 
-  var babyContent='<div class="settings-row">'
-    +'<div><div class="settings-row-label">Baby\'s name</div><div class="settings-row-sub">Used in personalised messages</div></div>'
-    +'<input type="text" value="'+(bp.name||'')+'" placeholder="e.g. Aria" onblur="saveBabyProfile(\'name\',this.value)"'
-    +' style="background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:\'Inter\',sans-serif;font-size:14px;padding:7px 10px;width:110px;outline:none;text-align:right">'
-    +'</div>'
-    +'<div class="settings-row" style="border-bottom:none">'
-    +'<div><div class="settings-row-label">Gender</div><div class="settings-row-sub">Used in night messages</div></div>'
-    +'<div style="display:flex;gap:6px">'
-    +['girl','boy','unset'].map(function(g){
-      var active=bp.gender===g||(g==='unset'&&!bp.gender);
-      return '<button onclick="saveBabyProfile(\'gender\',\''+g+'\')" style="padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'#1a2a3a':'var(--card2)')+';color:'+(active?'var(--accent)':'var(--muted)')+';font-family:\'Inter\',sans-serif">'+(g==='girl'?'Girl':g==='boy'?'Boy':'\u2013')+'</button>';
-    }).join('')+'</div></div>';
+  // ── 2. BABY ───────────────────────────────────────────────────
+  var babyContent = '<div class="settings-row">'
+    + '<div><div class="settings-row-label">Name</div></div>'
+    + '<input type="text" value="'+(bp.name||'')+'" placeholder="e.g. Leo" oninput="saveBabyProfile(\'name\',this.value)"'
+    + ' style="background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:\'Inter\',sans-serif;font-size:14px;padding:7px 10px;width:120px;outline:none;text-align:right">'
+    + '</div>'
+    + '<div class="settings-row" style="border-bottom:none">'
+    + '<div><div class="settings-row-label">Gender</div><div class="settings-row-sub">Used in personalised messages</div></div>'
+    + '<div style="display:flex;gap:6px">'
+    + ['girl','boy','other'].map(function(g) {
+        var labels = {girl:'Girl', boy:'Boy', other:'Prefer not to say'};
+        var active = bp.gender === g || (g==='other' && !bp.gender);
+        return '<button onclick="saveBabyProfile(\'gender\',\''+g+'\')" style="padding:6px 10px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'#1a2a3a':'var(--card2)')+';color:'+(active?'var(--accent)':'var(--muted)')+';font-family:\'Inter\',sans-serif">'+labels[g]+'</button>';
+      }).join('')
+    + '</div></div>';
 
-  var choreContent='<div class="settings-row"><div><div class="settings-row-label">Bin day</div></div>'
-    +'<select class="select-input" style="width:auto;min-width:110px" onchange="saveChoreCfg(\'binDay\',this.value)">'+dayOpts+'</select></div>'
-    +'<div class="settings-row"><div><div class="settings-row-label">Shopping day</div></div>'
-    +'<select class="select-input" style="width:auto;min-width:110px" onchange="saveChoreCfg(\'shoppingDay\',this.value)">'+shopOpts+'</select></div>'
-    +'<div class="settings-row"><div><div class="settings-row-label">Rest day</div></div>'
-    +'<select class="select-input" style="width:auto;min-width:110px" onchange="saveChoreCfg(\'restDay\',this.value)">'+restOpts+'</select></div>';
+  // ── 3. HOME & CHORES ──────────────────────────────────────────
+  var choreContent = '<div style="padding:10px 14px 6px;font-size:13px;color:var(--muted);line-height:1.5">The app rotates household chores daily. Set your special days below so it can plan around them.</div>'
+    + '<div class="settings-row"><div><div class="settings-row-label">Bin day</div></div>'
+    + '<select class="select-input" style="width:auto;min-width:110px" onchange="saveChoreCfg(\'binDay\',this.value)">'+dayOpts+'</select></div>'
+    + '<div class="settings-row"><div><div class="settings-row-label">Food shopping day</div></div>'
+    + '<select class="select-input" style="width:auto;min-width:110px" onchange="saveChoreCfg(\'shoppingDay\',this.value)">'+shopOpts+'</select></div>'
+    + '<div class="settings-row" style="border-bottom:none"><div><div class="settings-row-label">Rest day</div><div class="settings-row-sub">No chore on this day</div></div>'
+    + '<select class="select-input" style="width:auto;min-width:110px" onchange="saveChoreCfg(\'restDay\',this.value)">'+restOpts+'</select></div>';
 
+  // ── 4. SETTINGS (safety + data) ───────────────────────────────
+  var settingsContent = '<div style="padding:10px 14px 0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted)">Safety checks</div>'
+    + '<div class="settings-row"><div><div class="settings-row-label">Cot nap check-ins</div><div class="settings-row-sub">Reminder while baby is in cot</div></div>'
+    + '<div class="toggle-switch '+(sc.cotEnabled?'on':'off')+'" onclick="toggleSafety(\'cotEnabled\')"><div class="toggle-knob"></div></div></div>'
+    + '<div class="settings-row"><div><div class="settings-row-label">Pram nap reminders</div><div class="settings-row-sub">Reminder to stay nearby</div></div>'
+    + '<div class="toggle-switch '+(sc.pramEnabled?'on':'off')+'" onclick="toggleSafety(\'pramEnabled\')"><div class="toggle-knob"></div></div></div>'
+    + '<div class="settings-row"><div><div class="settings-row-label">Check-in every</div></div>'
+    + '<select class="select-input" style="width:auto;min-width:120px" onchange="setSafetyInterval(this.value)">'
+    + '<option value="20" '+(sc.intervalMins===20?'selected':'')+'>20 mins</option>'
+    + '<option value="30" '+(sc.intervalMins===30||!sc.intervalMins?'selected':'')+'>30 mins</option>'
+    + '<option value="45" '+(sc.intervalMins===45?'selected':'')+'>45 mins</option>'
+    + '<option value="60" '+(sc.intervalMins===60?'selected':'')+'>60 mins</option>'
+    + '</select></div>'
 
-  var dataContent='<div class="settings-row"><div class="settings-row-label">Days logged</div><span class="settings-row-val">'+dayCount+'</span></div>'
-    +'<div class="settings-row"><div class="settings-row-label">Total naps</div><span class="settings-row-val">'+napCount+'</span></div>'
-    +'<div style="padding:12px 14px;border-top:1px solid var(--border)">'
-    +'<div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">Export \u2014 copy before any update</div>'
-    +'<textarea class="export-box" readonly onclick="this.select()">'+JSON.stringify(state)+'</textarea>'
-    +'<button class="btn-primary" onclick="copyExport()">\uD83D\uDCCB Copy to clipboard</button>'
-    +'<div id="copy-ok" style="text-align:center;font-size:13px;color:var(--teal);margin-top:6px;display:none">\u2713 Copied!</div>'
-    +'</div>'
-    +'<div style="padding:12px 14px;border-top:1px solid var(--border)">'
-    +'<div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">Import \u2014 restore after update</div>'
-    +'<textarea id="import-box" class="export-box" placeholder="Paste exported data here..."></textarea>'
-    +'<button class="btn-secondary" onclick="importData()">\uD83D\uDCE5 Restore data</button>'
-    +'<div id="import-ok" style="text-align:center;font-size:13px;color:var(--teal);margin-top:6px;display:none"></div>'
-    +'<div id="import-err" style="text-align:center;font-size:13px;color:var(--red);margin-top:6px;display:none"></div>'
-    +'</div>';
+    // Data section
+    + '<div style="padding:14px 14px 6px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-top:8px;border-top:1px solid var(--border)">Your data</div>'
+    + '<div style="padding:0 14px 12px;font-size:13px;color:var(--muted);line-height:1.6">'
+    + 'All your nap history is stored <strong style="color:var(--text)">on this device only</strong> — in your browser\'s local storage. '
+    + 'Nothing is sent to any server. Clearing your browser data or switching browsers will delete it permanently. '
+    + 'Export regularly to keep a backup.'
+    + '</div>'
 
-  var safetyContent='<div class="settings-row">'
-    +'<div><div class="settings-row-label">Cot nap check-ins</div><div class="settings-row-sub">Reminder when baby is in cot</div></div>'
-    +'<div class="toggle-switch '+(sc.cotEnabled?'on':'off')+'" onclick="toggleSafety(\'cotEnabled\')"><div class="toggle-knob"></div></div>'
-    +'</div>'
-    +'<div class="settings-row">'
-    +'<div><div class="settings-row-label">Pram nap reminders</div><div class="settings-row-sub">Reminder to stay nearby</div></div>'
-    +'<div class="toggle-switch '+(sc.pramEnabled?'on':'off')+'" onclick="toggleSafety(\'pramEnabled\')"><div class="toggle-knob"></div></div>'
-    +'</div>'
-    +'<div class="settings-row" style="border-bottom:none">'
-    +'<div><div class="settings-row-label">Check-in interval</div></div>'
-    +'<select class="select-input" style="width:auto;min-width:120px" onchange="setSafetyInterval(this.value)">'
-    +'<option value="20" '+(sc.intervalMins===20?'selected':'')+'>Every 20 mins</option>'
-    +'<option value="30" '+(sc.intervalMins===30||!sc.intervalMins?'selected':'')+'>Every 30 mins</option>'
-    +'<option value="45" '+(sc.intervalMins===45?'selected':'')+'>Every 45 mins</option>'
-    +'<option value="60" '+(sc.intervalMins===60?'selected':'')+'>Every 60 mins</option>'
-    +'</select></div>';
+    + '<div class="settings-row"><div class="settings-row-label">Days logged</div><span class="settings-row-val">'+dayCount+'</span></div>'
+    + '<div class="settings-row" style="border-bottom:none"><div class="settings-row-label">Total naps</div><span class="settings-row-val">'+napCount+'</span></div>'
 
-  document.getElementById('tab-content').innerHTML=
-    '<div style="background:#1a1410;border:1px solid #3a2a10;border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start">'
-    +'<span style="font-size:16px;flex-shrink:0">⚠️</span>'
-    +'<div style="font-size:13px;color:var(--amber);line-height:1.6"><strong>Your data is stored on this device only.</strong> '
-    +'Clearing your browser data or switching browsers will permanently delete all your nap history. '
-    +'Use the Export option below to back up your data before clearing anything.</div>'
-    +'</div>'
-    +grp('parent-goal','My goal & sleep vibe',goalContent)
-    +grp('baby','Baby profile',babyContent)
-    +grp('chores','Chore schedule',choreContent)
-    +grp('safety','Safety checks',safetyContent)
-    +grp('data','Data',dataContent)
-    +'<div class="version-note">v2.4.0 · Goal-driven contact tasks · Clean settings</div>';
+    // Export as file
+    + '<div style="padding:12px 14px;border-top:1px solid var(--border)">'
+    + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">Export data</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">Downloads a backup file to your device.</div>'
+    + '<button class="btn-primary" onclick="exportDataFile()">\u2B07\uFE0F Download backup</button>'
+    + '</div>'
+
+    // Import from file
+    + '<div style="padding:12px 14px;border-top:1px solid var(--border)">'
+    + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">Import data</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">Restore from a previously exported backup file.</div>'
+    + '<input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importDataFile(this)">'
+    + '<button class="btn-secondary" onclick="document.getElementById(\'import-file-input\').click()">\u2B06\uFE0F Upload backup file</button>'
+    + '<div id="import-ok" style="text-align:center;font-size:13px;color:var(--teal);margin-top:6px;display:none"></div>'
+    + '<div id="import-err" style="text-align:center;font-size:13px;color:var(--red);margin-top:6px;display:none"></div>'
+    + '</div>';
+
+  document.getElementById('tab-content').innerHTML =
+    grp('my-profile', 'My Profile', profileContent, goalDone)
+    + grp('baby', 'Baby', babyContent, babyDone)
+    + grp('chores', 'Home & Chores', choreContent, choresDone)
+    + grp('settings-adv', 'Settings', settingsContent, true)
+    + '<div class="version-note">Keep your data backed up regularly \u2014 Export under Settings.</div>';
 }
 
 function quickNap(type){
@@ -1494,29 +1661,46 @@ function setSafetyInterval(val){
   lastSafetyCheckMins=0;saveState();renderSettings();
 }
 
-function copyExport(){
-  var box=document.querySelector('.export-box[readonly]');
-  if(!box)return;box.select();
-  try{navigator.clipboard.writeText(box.value).catch(function(){document.execCommand('copy');});}catch(e){document.execCommand('copy');}
-  var ok=document.getElementById('copy-ok');
-  if(ok){ok.style.display='block';setTimeout(function(){ok.style.display='none';},2500);}
+function exportDataFile() {
+  var data = JSON.stringify(state, null, 2);
+  var blob = new Blob([data], {type: 'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var babyName = (state.babyProfile && state.babyProfile.name) ? state.babyProfile.name.toLowerCase() : 'naptracker';
+  var date = new Date().toISOString().split('T')[0];
+  a.href = url;
+  a.download = babyName + '-naps-' + date + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('\u2B07\uFE0F Backup downloaded');
 }
 
-function importData(){
-  var ib=document.getElementById('import-box');
-  var raw=ib?ib.value.trim():'';
-  var ok=document.getElementById('import-ok'),err=document.getElementById('import-err');
-  if(ok)ok.style.display='none';if(err)err.style.display='none';
-  if(!raw){if(err){err.textContent='Paste your export first';err.style.display='block';}return;}
-  try{
-    var parsed=JSON.parse(raw);
-    if(!parsed.days)throw new Error();
-    var nc=Object.values(parsed.days).reduce(function(a,n){return a+n.length;},0);
-    var dc=Object.keys(parsed.days).length;
-    state=parsed;saveState();
-    if(ok){ok.textContent='Restored '+nc+' naps across '+dc+' days';ok.style.display='block';}
-    setTimeout(function(){render();},1500);
-  }catch(e){if(err){err.textContent="Couldn't read that data";err.style.display='block';}}
+function importDataFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var ok = document.getElementById('import-ok');
+  var err = document.getElementById('import-err');
+  if (ok) ok.style.display = 'none';
+  if (err) err.style.display = 'none';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var parsed = JSON.parse(e.target.result);
+      if (!parsed.days) throw new Error('Invalid file');
+      var nc = Object.values(parsed.days).reduce(function(a,n){return a+n.length;}, 0);
+      var dc = Object.keys(parsed.days).length;
+      state = parsed;
+      saveState();
+      if (ok) { ok.textContent = '\u2713 Restored ' + nc + ' naps across ' + dc + ' days'; ok.style.display = 'block'; }
+      setTimeout(function(){ render(); }, 1200);
+    } catch(e) {
+      if (err) { err.textContent = "Couldn't read that file — make sure it's a valid backup"; err.style.display = 'block'; }
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
 }
 
 function checkSafetyAlert(ongoing){
@@ -1535,7 +1719,44 @@ function checkSafetyAlert(ongoing){
   }
 }
 
+function dismissPwaBanner() {
+  localStorage.setItem('pwa_banner_dismissed', '1');
+  document.getElementById('pwa-banner').style.display = 'none';
+}
+
+function getPwaInstallText() {
+  var ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/.test(ua) && /Safari/.test(ua) && !/CriOS/.test(ua) && !/FxiOS/.test(ua)) {
+    return 'Tap the <strong>Share button ↑</strong> at the bottom of Safari, then tap <strong>"Add to Home Screen"</strong>';
+  }
+  if (/CriOS/.test(ua)) {
+    return 'Tap the <strong>three dots ⋯</strong> at the bottom, then tap <strong>"Add to Home Screen"</strong>';
+  }
+  if (/Android/.test(ua) && /Chrome/.test(ua)) {
+    return 'Tap the <strong>three dots ⋮</strong> in the top right, then tap <strong>"Add to Home screen"</strong>';
+  }
+  if (/Firefox/.test(ua) || /FxiOS/.test(ua)) {
+    return 'Tap the <strong>three dots ⋯</strong> menu, then tap <strong>"Install"</strong> or <strong>"Add to Home Screen"</strong>';
+  }
+  if (/SamsungBrowser/.test(ua)) {
+    return 'Tap the <strong>menu icon</strong> at the bottom, then tap <strong>"Add page to"</strong> → <strong>"Home screen"</strong>';
+  }
+  return 'Open your browser menu and tap <strong>"Add to Home Screen"</strong> to install';
+}
+
+function initPwaBanner() {
+  var dismissed = localStorage.getItem('pwa_banner_dismissed');
+  var isStandalone = window.navigator.standalone === true
+    || window.matchMedia('(display-mode: standalone)').matches;
+  if (!dismissed && !isStandalone) {
+    var banner = document.getElementById('pwa-banner');
+    banner.querySelector('.pwa-banner-text').innerHTML = '<strong>Install for the best experience</strong><br>' + getPwaInstallText();
+    banner.style.display = 'flex';
+  }
+}
+
 render();
+initPwaBanner();
 setInterval(function(){
   if(currentTab==='today'){
     render();
