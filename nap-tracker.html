@@ -1130,7 +1130,6 @@ function renderPatterns() {
   var goal = PARENT_GOALS.find(function(g){ return g.id===state.parentGoal; }) || PARENT_GOALS[0];
   var vibe = SLEEP_VIBES.find(function(v){ return v.id===state.sleepVibe; }) || SLEEP_VIBES[1];
 
-  // Empty state
   if (dayCount < 2) {
     el.innerHTML = '<div class="empty">'
       + '<div style="font-size:28px;margin-bottom:12px">📈</div>'
@@ -1158,15 +1157,13 @@ function renderPatterns() {
   var h = '';
 
   // ── Milestone detection ───────────────────────────────────────
-  // Detect nap consolidation (3→2 or 2→1 naps per day) over last 7 days
   if (dayCount >= 7) {
     var recent7 = allDays.slice(0, 7);
     var older7  = allDays.slice(7, 14);
     if (older7.length >= 7) {
       var recentAvg = recent7.reduce(function(a,b){return a+b[1].length;},0) / 7;
       var olderAvg  = older7.reduce(function(a,b){return a+b[1].length;},0) / 7;
-      var drop = olderAvg - recentAvg;
-      if (drop >= 0.8) {
+      if (olderAvg - recentAvg >= 0.8) {
         var babyN = (state.babyProfile&&state.babyProfile.name)?state.babyProfile.name:'your baby';
         h += '<div style="background:linear-gradient(135deg,#1a2a1a,#141e14);border:1px solid var(--teal);border-radius:14px;padding:14px 16px;margin-bottom:12px">'
           + '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">🌱 ' + babyN + '\'s schedule is shifting</div>'
@@ -1181,16 +1178,14 @@ function renderPatterns() {
   }
 
   // ── Monthly goal prompt ───────────────────────────────────────
-  // Show if 28+ days logged and goal hasn't been changed in 28 days
   if (dayCount >= 28 && !state._goalPromptDismissed) {
     var firstDay = allDays[allDays.length-1][0];
-    var firstDate = new Date(firstDay+'T12:00:00');
-    var daysSinceStart = Math.floor((new Date() - firstDate) / 86400000);
+    var daysSinceStart = Math.floor((new Date() - new Date(firstDay+'T12:00:00')) / 86400000);
     if (daysSinceStart >= 28) {
       h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'
         + '<div style="flex:1">'
         + '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">🎯 Still the right goal?</div>'
-        + '<div style="font-size:13px;color:var(--muted);line-height:1.5">It\'s been a month. Priorities shift — is <strong style="color:var(--accent)">' + goal.label + '</strong> still what you want to protect?</div>'
+        + '<div style="font-size:13px;color:var(--muted);line-height:1.5">It\'s been a month. Is <strong style="color:var(--accent)">' + goal.label + '</strong> still what you want to protect?</div>'
         + '<button onclick="switchTab(\'settings\',document.querySelectorAll(\'.tab\')[3])" style="margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-weight:600;padding:6px 12px;cursor:pointer;font-family:\'Inter\',sans-serif">Review my goal</button>'
         + '</div>'
         + '<button onclick="dismissGoalPrompt()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0;line-height:1;flex-shrink:0">\xd7</button>'
@@ -1198,7 +1193,7 @@ function renderPatterns() {
     }
   }
 
-  // ── Tier progress nudge ───────────────────────────────────────
+  // ── Tier nudge ────────────────────────────────────────────────
   if (!showPrediction) {
     var daysLeft = 7 - dayCount;
     h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px">'
@@ -1211,70 +1206,20 @@ function renderPatterns() {
       + '</div>';
   } else if (!showWeeklySummary) {
     var daysLeft2 = 14 - dayCount;
-    h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px">'
-      + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">📊 Weekly summary coming</div>'
-      + '<div style="font-size:13px;color:var(--muted);line-height:1.5"><strong style="color:var(--text)">' + daysLeft2 + ' more day' + (daysLeft2===1?'':'s') + '</strong> until your weekly summary unlocks — a snapshot of the week\'s naps and your best window.</div>'
-      + '<div style="margin-top:10px;background:var(--border);border-radius:4px;height:4px">'
-      + '<div style="background:var(--teal);height:4px;border-radius:4px;width:' + Math.round(dayCount/14*100) + '%"></div>'
-      + '</div>'
-      + '<div style="font-size:11px;color:var(--muted);margin-top:4px">' + dayCount + ' of 14 days</div>'
+    h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px">'
+      + '<div style="flex:1;font-size:12px;color:var(--muted);line-height:1.4">📊 <strong style="color:var(--text)">' + daysLeft2 + ' more day' + (daysLeft2===1?'':'s') + '</strong> until your weekly summary unlocks</div>'
+      + '<div style="background:var(--border);border-radius:4px;height:4px;width:60px;flex-shrink:0"><div style="background:var(--teal);height:4px;border-radius:4px;width:' + Math.round(dayCount/14*100) + '%"></div></div>'
       + '</div>';
   }
 
-  // ── Weekly summary — replaces Gantt at day 14 ────────────────
-  if (showWeeklySummary) {
-    // Get this week's data
-    var weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 6); weekStart.setHours(0,0,0,0);
-    var thisWeekDays = allDays.filter(function(e){
-      return new Date(e[0]+'T12:00:00') >= weekStart;
-    });
-    var weekNaps = thisWeekDays.reduce(function(a,b){return a.concat(b[1]);}, []);
-    var weekDone = weekNaps.filter(function(n){return n.start&&n.end;});
-    var weekTotal = weekDone.reduce(function(a,n){return a+durMins(n.start,n.end);},0);
-
-    // Find longest free window this week
-    var longestWindow = 0, longestWindowDay = '';
-    thisWeekDays.forEach(function(entry) {
-      var date = entry[0];
-      var sorted = entry[1].filter(function(n){return n.end;}).sort(function(a,b){return a.start.localeCompare(b.start);});
-      for (var i=0; i<sorted.length-1; i++) {
-        var gap = durMins(sorted[i].end, sorted[i+1].start);
-        if (gap > longestWindow) { longestWindow = gap; longestWindowDay = date; }
-      }
-    });
-
-    var longestDayLabel = '';
-    if (longestWindowDay) {
-      var d = new Date(longestWindowDay+'T12:00:00');
-      longestDayLabel = d.toLocaleDateString('en-GB',{weekday:'long'});
-    }
-
-    h += '<div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px">'
-      + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent);margin-bottom:12px">📊 This week</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">'
-      + '<div style="text-align:center"><div style="font-size:22px;font-weight:800;color:var(--accent);letter-spacing:-0.5px">'+weekDone.length+'</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-top:2px">Naps</div></div>'
-      + '<div style="text-align:center"><div style="font-size:22px;font-weight:800;color:var(--teal);letter-spacing:-0.5px">'+fmtDur(weekTotal)+'</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-top:2px">Total</div></div>'
-      + '<div style="text-align:center"><div style="font-size:22px;font-weight:800;color:var(--purple);letter-spacing:-0.5px">'+(longestWindow>0?fmtDur(longestWindow):'\u2014')+'</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-top:2px">Longest free</div></div>'
-      + '</div>'
-      + (longestWindowDay ? '<div style="font-size:12px;color:var(--muted);padding-top:10px;border-top:1px solid var(--border)">Best window this week: <strong style="color:var(--text)">'+longestDayLabel+'</strong></div>' : '')
-      + '</div>';
-  }
-
-  // ── Stats 2x2 ─────────────────────────────────────────────────
+  // ── Stats needed for prediction ───────────────────────────────
   var startHours=done.map(function(n){return parseInt(n.start.split(':')[0]);});
   var hourFreq={};
   startHours.forEach(function(hr){hourFreq[hr]=(hourFreq[hr]||0)+1;});
   var peakHour=Object.keys(hourFreq).sort(function(a,b){return hourFreq[b]-hourFreq[a];})[0];
   var peakHourFmt=peakHour?fmtTime(pad(peakHour)+':00'):'\u2014';
 
-  h += '<div class="stats-grid">';
-  h += '<div class="stat-tile"><div class="stat-tile-label">Avg naps/day</div><div class="stat-tile-value" style="color:var(--accent)">'+avgPerDay+'</div><div class="stat-tile-sub">blocks</div></div>';
-  h += '<div class="stat-tile"><div class="stat-tile-label">Avg nap length</div><div class="stat-tile-value" style="color:var(--teal)">'+fmtDur(avgDur)+'</div><div class="stat-tile-sub">per nap</div></div>';
-  h += '<div class="stat-tile"><div class="stat-tile-label">First nap usually</div><div class="stat-tile-value" style="color:var(--amber);font-size:20px">'+peakHourFmt+'</div><div class="stat-tile-sub">most frequent</div></div>';
-  h += '<div class="stat-tile"><div class="stat-tile-label">Between naps</div><div class="stat-tile-value" style="color:var(--purple);font-size:20px">'+fmtDur(avgWW)+'</div><div class="stat-tile-sub">avg awake time</div></div>';
-  h += '</div>';
-
-  // ── Prediction ────────────────────────────────────────────────
+  // ── PREDICTION — top billing ──────────────────────────────────
   if (showPrediction) {
     var goalNeedsFreehands = (goal.id==='fitness');
     var contactCount=done.filter(function(n){return n.type==='contact';}).length;
@@ -1282,22 +1227,54 @@ function renderPatterns() {
     var likelyLabel = goalNeedsFreehands
       ? 'a Cot / Pram nap (you\'ll need both hands free)'
       : contactCount >= cotCount ? 'a Contact nap' : 'a Cot / Pram nap';
-    var predTimeStr = peakHour ? fmtTime(pad(peakHour)+':00') : '\u2014';
     var confidence = vibe.id==='predictable' ? 'High confidence'
       : vibe.id==='chaos' ? 'Low confidence \u2014 naps vary a lot'
       : 'Low confidence \u2014 regression phase';
 
     h += '<div class="prediction-card">';
-    h += '<div class="prediction-eyebrow">\uD83D\uDCA1 Based on ' + dayCount + ' days</div>';
-    h += '<div class="prediction-body">Your best window for <strong>' + goal.label + '</strong> tomorrow is likely around <strong>' + predTimeStr + '</strong> during ' + likelyLabel + '.</div>';
-    h += '<div class="prediction-stats">';
-    h += '<div class="prediction-stat">\uD83D\uDCCA Avg naps: <strong>' + avgPerDay + '</strong></div>';
-    h += '<div class="prediction-stat">\u23F1 Avg length: <strong>' + fmtDur(avgDur) + '</strong></div>';
-    h += '<div class="prediction-stat">\uD83C\uDFAF <strong>' + confidence + '</strong></div>';
-    h += '</div></div>';
+    h += '<div class="prediction-eyebrow">\uD83D\uDCA1 Based on ' + dayCount + ' days \u00b7 ' + confidence + '</div>';
+    h += '<div class="prediction-body">Your best window for <strong>' + goal.label + '</strong> tomorrow is likely around <strong>' + peakHourFmt + '</strong> during ' + likelyLabel + '.</div>';
+    h += '</div>';
   }
 
-  // ── Gaps ──────────────────────────────────────────────────────
+  // ── Weekly summary ────────────────────────────────────────────
+  if (showWeeklySummary) {
+    var weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 6); weekStart.setHours(0,0,0,0);
+    var thisWeekDays = allDays.filter(function(e){ return new Date(e[0]+'T12:00:00') >= weekStart; });
+    var weekNaps = thisWeekDays.reduce(function(a,b){return a.concat(b[1]);}, []);
+    var weekDone = weekNaps.filter(function(n){return n.start&&n.end;});
+    var weekTotal = weekDone.reduce(function(a,n){return a+durMins(n.start,n.end);},0);
+    var longestWindow = 0, longestWindowDay = '';
+    thisWeekDays.forEach(function(entry) {
+      var sorted = entry[1].filter(function(n){return n.end;}).sort(function(a,b){return a.start.localeCompare(b.start);});
+      sorted.forEach(function(n){
+        var len = durMins(n.start, n.end);
+        if (len > longestWindow) { longestWindow = len; longestWindowDay = entry[0]; }
+      });
+    });
+    var longestDayLabel = longestWindowDay ? new Date(longestWindowDay+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long'}) : '';
+
+    h += '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+      + '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent)">📊 This week</span>'
+      + (longestDayLabel ? '<span style="font-size:11px;color:var(--muted)">Best: <strong style="color:var(--text)">'+longestDayLabel+'</strong></span>' : '')
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+      + '<div style="text-align:center"><div style="font-size:19px;font-weight:800;color:var(--accent);letter-spacing:-0.5px">'+weekDone.length+'</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px">Naps</div></div>'
+      + '<div style="text-align:center"><div style="font-size:19px;font-weight:800;color:var(--teal);letter-spacing:-0.5px">'+fmtDur(weekTotal)+'</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px">Total</div></div>'
+      + '<div style="text-align:center"><div style="font-size:19px;font-weight:800;color:var(--purple);letter-spacing:-0.5px">'+(longestWindow>0?fmtDur(longestWindow):'\u2014')+'</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px">Longest free</div></div>'
+      + '</div></div>';
+  }
+
+  // ── Compact stats strip ───────────────────────────────────────
+  h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">'
+    + '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 4px;text-align:center"><div style="font-size:15px;font-weight:800;color:var(--accent)">'+avgPerDay+'</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">Naps/day</div></div>'
+    + '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 4px;text-align:center"><div style="font-size:15px;font-weight:800;color:var(--teal)">'+fmtDur(avgDur)+'</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">Avg nap</div></div>'
+    + '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 4px;text-align:center"><div style="font-size:15px;font-weight:800;color:var(--amber)">'+peakHourFmt+'</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">First nap</div></div>'
+    + '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 4px;text-align:center"><div style="font-size:15px;font-weight:800;color:var(--purple)">'+fmtDur(avgWW)+'</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">Awake avg</div></div>'
+    + '</div>';
+
+  // ── Gaps — collapsed, tap to expand ───────────────────────────
   if (showGaps) {
     var gaps = [];
     var firstNapMins = done.length > 0
@@ -1306,11 +1283,9 @@ function renderPatterns() {
         }).reduce(function(a,b){return a+b;},0)/done.length)
       : null;
 
-    // Real free window — longest gap between naps (baby asleep) from history
     var longestFree = 0, longestFreeCount = 0;
     allDays.slice(0, 14).forEach(function(entry) {
-      var sorted = entry[1].filter(function(n){return n.start&&n.end;}).sort(function(a,b){return a.start.localeCompare(b.start);});
-      sorted.forEach(function(n) {
+      entry[1].filter(function(n){return n.start&&n.end;}).forEach(function(n) {
         var len = durMins(n.start, n.end);
         if (len > longestFree) longestFree = len;
         if (len >= 45) longestFreeCount++;
@@ -1321,11 +1296,10 @@ function renderPatterns() {
       gaps.push({
         icon:'\u2728', name:'Your best free window',
         detail:'Your longest nap recently was '+fmtDur(longestFree)+' — that\'s genuine free time while '+((state.babyProfile&&state.babyProfile.name)?state.babyProfile.name:'baby')+' sleeps. Naps of 45m+ happened '+longestFreeCount+' time'+(longestFreeCount!==1?'s':'')+' in the last two weeks.',
-        badgeCls:'gap-badge-focus', cardCls:'gap-card-focus', badge:'BEST\nWINDOW'
+        badgeCls:'gap-badge-focus', cardCls:'gap-card-focus', badge:'BEST WINDOW'
       });
     }
 
-    // Before first nap — baby is awake, lower-demand window
     if (firstNapMins) {
       var wakeBase = state.wakeTime
         ? parseInt(state.wakeTime.split(':')[0])*60+parseInt(state.wakeTime.split(':')[1])
@@ -1335,7 +1309,7 @@ function renderPatterns() {
         gaps.push({
           icon:'\uD83C\uDF05', name:'Before first nap',
           detail:'About '+fmtDur(Math.round(morningGap))+' between '+(state.wakeTime?fmtTime(state.wakeTime):'wake up')+' and the first nap. Baby is awake, so this suits lower-demand tasks \u2014 feeding, play, getting yourself ready.',
-          badgeCls:'gap-badge-quick', cardCls:'gap-card-quick', badge:'BABY\nAWAKE'
+          badgeCls:'gap-badge-quick', cardCls:'gap-card-quick', badge:'BABY AWAKE'
         });
       }
     }
@@ -1344,47 +1318,54 @@ function renderPatterns() {
       var startMinsArr=done.map(function(n){return parseInt(n.start.split(':')[0])*60+parseInt(n.start.split(':')[1]);});
       var mean=startMinsArr.reduce(function(a,b){return a+b;},0)/startMinsArr.length;
       var variance=startMinsArr.reduce(function(a,b){return a+Math.pow(b-mean,2);},0)/startMinsArr.length;
-      var stdDev=Math.round(Math.sqrt(variance));
-      if (stdDev>25) {
+      if (Math.sqrt(variance)>25) {
         gaps.push({
           icon:'\uD83C\uDF07', name:'Nap times vary day to day',
           detail:'Naps don\'t start at a consistent time yet. Keep tasks short and easy to put down — the window might close sooner than expected.',
-          badgeCls:'gap-badge-quick', cardCls:'gap-card-quick', badge:'STAY\nFLEXIBLE'
+          badgeCls:'gap-badge-quick', cardCls:'gap-card-quick', badge:'STAY FLEXIBLE'
         });
       }
     }
 
-    // Goal contact card — only for goals where one-handed phone tasks make sense
     if (contactPct >= 40 && goal.id !== 'fitness') {
       var babyNm=(state.babyProfile&&state.babyProfile.name)?state.babyProfile.name+'\'s':'';
       gaps.push({
         icon: goal.icon, name: goal.label+' one-handed',
         detail: Math.round(contactPct)+'% of '+babyNm+' naps are contact naps. Great for phone-based '+goal.label.toLowerCase()+' tasks — you\'re holding the baby but your mind is free.',
-        badgeCls:'gap-badge-rest', cardCls:'gap-card-rest', badge:goal.icon+'\nGOAL'
+        badgeCls:'gap-badge-rest', cardCls:'gap-card-rest', badge:goal.icon+' GOAL'
       });
     } else if (contactPct >= 40 && goal.id === 'fitness') {
-      // For fitness, flag the contact nap pattern as a constraint instead
       var babyNm2=(state.babyProfile&&state.babyProfile.name)?state.babyProfile.name+'\'s':'';
       gaps.push({
         icon:'\uD83D\uDCAA', name:'Most naps are contact naps',
         detail: Math.round(contactPct)+'% of '+babyNm2+' naps are contact naps \u2014 tricky for workouts. Aim your exercise at Cot / Pram naps, and use contact naps to rest and recover instead.',
-        badgeCls:'gap-badge-rest', cardCls:'gap-card-rest', badge:'PLAN\nAHEAD'
+        badgeCls:'gap-badge-rest', cardCls:'gap-card-rest', badge:'PLAN AHEAD'
       });
     }
 
     if (gaps.length > 0) {
       h += '<div class="gaps-title">\uD83D\uDCA1 Your recurring windows</div>';
-      gaps.forEach(function(g){
-        h += '<div class="gap-card '+g.cardCls+'">';
-        h += '<div class="gap-card-left"><div class="gap-card-name">'+g.icon+' '+g.name+'</div>';
-        h += '<div class="gap-card-detail">'+g.detail+'</div></div>';
-        h += '<div class="gap-card-badge '+g.badgeCls+'">'+g.badge.replace('\n','<br>')+'</div>';
-        h += '</div>';
+      gaps.forEach(function(g, i){
+        var open = !!expandedDays['gap_'+i];
+        h += '<div class="gap-card '+g.cardCls+'" onclick="toggleGap('+i+')" style="cursor:pointer;flex-direction:column;align-items:stretch;gap:0">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">'
+          + '<div class="gap-card-name" style="margin:0">'+g.icon+' '+g.name+'</div>'
+          + '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
+          + '<span class="gap-card-badge '+g.badgeCls+'" style="white-space:nowrap;font-size:9px;padding:3px 8px">'+g.badge+'</span>'
+          + '<span style="font-size:10px;color:var(--muted)">'+(open?'\u25b2':'\u25bc')+'</span>'
+          + '</div></div>'
+          + (open ? '<div class="gap-card-detail" style="margin-top:8px">'+g.detail+'</div>' : '')
+          + '</div>';
       });
     }
   }
 
   el.innerHTML = h;
+}
+
+function toggleGap(i) {
+  expandedDays['gap_'+i] = !expandedDays['gap_'+i];
+  renderPatterns();
 }
 
 function renderHistory() {
