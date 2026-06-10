@@ -905,11 +905,33 @@ function renderToday() {
         +'</div>';
     }
 
+    // Remaining window estimate — based on completed naps of the same type
+    var sameTypeDurs = [];
+    Object.values(state.days).forEach(function(dayNaps){
+      dayNaps.forEach(function(n){
+        if (n.start && n.end) {
+          var sameGroup = (ongoing.type === 'contact') ? (n.type === 'contact') : (n.type === 'cot' || n.type === 'pram');
+          if (sameGroup) sameTypeDurs.push(durMins(n.start, n.end));
+        }
+      });
+    });
+    var estimateHtml = '';
+    if (sameTypeDurs.length >= 4) {
+      var typeAvg = Math.round(sameTypeDurs.reduce(function(a,b){return a+b;},0) / sameTypeDurs.length);
+      var remain = typeAvg - elapsed;
+      if (remain > 5) {
+        estimateHtml = '<div class="status-sub" style="color:'+col+';opacity:0.85;margin-top:2px">\u23F3 Likely ~'+fmtDur(remain)+' left \u00b7 based on '+(babyN||'baby')+'\'s average</div>';
+      } else if (elapsed >= typeAvg && elapsed - typeAvg >= 5) {
+        estimateHtml = '<div class="status-sub" style="color:var(--teal);margin-top:2px">\u2728 Longer than usual \u2014 bonus time</div>';
+      }
+    }
+
     h+='<div class="status-card '+napClass+'">'
       +'<div class="status-eyebrow" style="color:'+col+'"><span class="live-dot" style="background:'+col+'"></span>'
       +({contact:'\uD83D\uDCF1 Contact',cot:'\uD83D\uDECC Cot / Pram',pram:'\uD83D\uDECC Cot / Pram'}[ongoing.type]||ongoing.type)+(babyN?' \u00b7 '+babyN:'')+' nap in progress</div>'
       +'<div id="live-timer" style="font-size:52px;font-weight:800;letter-spacing:-2px;line-height:1;margin:12px 0;color:'+col+'">'+fmtDurSecs(secs)+'</div>'
       +'<div class="status-sub">Started '+fmtTime(ongoing.start)+'</div>'
+      +estimateHtml
       +'<button class="end-btn" onclick="endOngoingNap()">\u2713 End nap</button>'
       +'</div>';
 
@@ -1284,6 +1306,26 @@ function renderPatterns() {
         }).reduce(function(a,b){return a+b;},0)/done.length)
       : null;
 
+    // Real free window — longest gap between naps (baby asleep) from history
+    var longestFree = 0, longestFreeCount = 0;
+    allDays.slice(0, 14).forEach(function(entry) {
+      var sorted = entry[1].filter(function(n){return n.start&&n.end;}).sort(function(a,b){return a.start.localeCompare(b.start);});
+      sorted.forEach(function(n) {
+        var len = durMins(n.start, n.end);
+        if (len > longestFree) longestFree = len;
+        if (len >= 45) longestFreeCount++;
+      });
+    });
+
+    if (longestFree >= 45) {
+      gaps.push({
+        icon:'\u2728', name:'Your best free window',
+        detail:'Your longest nap recently was '+fmtDur(longestFree)+' — that\'s genuine free time while '+((state.babyProfile&&state.babyProfile.name)?state.babyProfile.name:'baby')+' sleeps. Naps of 45m+ happened '+longestFreeCount+' time'+(longestFreeCount!==1?'s':'')+' in the last two weeks.',
+        badgeCls:'gap-badge-focus', cardCls:'gap-card-focus', badge:'BEST\nWINDOW'
+      });
+    }
+
+    // Before first nap — baby is awake, lower-demand window
     if (firstNapMins) {
       var wakeBase = state.wakeTime
         ? parseInt(state.wakeTime.split(':')[0])*60+parseInt(state.wakeTime.split(':')[1])
@@ -1291,9 +1333,9 @@ function renderPatterns() {
       var morningGap = firstNapMins - wakeBase;
       if (morningGap >= 20) {
         gaps.push({
-          icon:'\uD83C\uDF05', name:'Free window before first nap',
-          detail:'You usually have about '+fmtDur(Math.round(morningGap))+' after '+(state.wakeTime?fmtTime(state.wakeTime):'wake up')+' before the first nap. Your most reliable window of the day.',
-          badgeCls:'gap-badge-focus', cardCls:'gap-card-focus', badge:'BEST\nWINDOW'
+          icon:'\uD83C\uDF05', name:'Before first nap',
+          detail:'About '+fmtDur(Math.round(morningGap))+' between '+(state.wakeTime?fmtTime(state.wakeTime):'wake up')+' and the first nap. Baby is awake, so this suits lower-demand tasks \u2014 feeding, play, getting yourself ready.',
+          badgeCls:'gap-badge-quick', cardCls:'gap-card-quick', badge:'BABY\nAWAKE'
         });
       }
     }
@@ -1312,12 +1354,21 @@ function renderPatterns() {
       }
     }
 
-    if (contactPct >= 40) {
+    // Goal contact card — only for goals where one-handed phone tasks make sense
+    if (contactPct >= 40 && goal.id !== 'fitness') {
       var babyNm=(state.babyProfile&&state.babyProfile.name)?state.babyProfile.name+'\'s':'';
       gaps.push({
         icon: goal.icon, name: goal.label+' one-handed',
         detail: Math.round(contactPct)+'% of '+babyNm+' naps are contact naps. Great for phone-based '+goal.label.toLowerCase()+' tasks — you\'re holding the baby but your mind is free.',
         badgeCls:'gap-badge-rest', cardCls:'gap-card-rest', badge:goal.icon+'\nGOAL'
+      });
+    } else if (contactPct >= 40 && goal.id === 'fitness') {
+      // For fitness, flag the contact nap pattern as a constraint instead
+      var babyNm2=(state.babyProfile&&state.babyProfile.name)?state.babyProfile.name+'\'s':'';
+      gaps.push({
+        icon:'\uD83D\uDCAA', name:'Most naps are contact naps',
+        detail: Math.round(contactPct)+'% of '+babyNm2+' naps are contact naps \u2014 tricky for workouts. Aim your exercise at Cot / Pram naps, and use contact naps to rest and recover instead.',
+        badgeCls:'gap-badge-rest', cardCls:'gap-card-rest', badge:'PLAN\nAHEAD'
       });
     }
 
