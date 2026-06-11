@@ -1219,21 +1219,58 @@ function renderPatterns() {
   var peakHour=Object.keys(hourFreq).sort(function(a,b){return hourFreq[b]-hourFreq[a];})[0];
   var peakHourFmt=peakHour?fmtTime(pad(peakHour)+':00'):'\u2014';
 
-  // ── PREDICTION — top billing ──────────────────────────────────
+  // ── PREDICTION — top billing, goal-specific advice ───────────
   if (showPrediction) {
     var goalNeedsFreehands = (goal.id==='fitness');
     var contactCount=done.filter(function(n){return n.type==='contact';}).length;
     var cotCount=done.filter(function(n){return n.type==='cot'||n.type==='pram';}).length;
+    var isContactLikely = !goalNeedsFreehands && contactCount >= cotCount;
     var likelyLabel = goalNeedsFreehands
-      ? 'a Cot / Pram nap (you\'ll need both hands free)'
-      : contactCount >= cotCount ? 'a Contact nap' : 'a Cot / Pram nap';
+      ? 'a Cot / Pram nap'
+      : isContactLikely ? 'a Contact nap' : 'a Cot / Pram nap';
     var confidence = vibe.id==='predictable' ? 'High confidence'
       : vibe.id==='chaos' ? 'Low confidence \u2014 naps vary a lot'
       : 'Low confidence \u2014 regression phase';
 
+    // Goal-specific tip: adapts to nap length and likely nap type
+    var lenStr = fmtDur(avgDur);
+    var shortNaps = avgDur < 30;
+    var tip = '';
+    if (goal.id === 'rest') {
+      tip = shortNaps
+        ? 'Even ' + lenStr + ' is a real break \u2014 sit down, drink something warm, do nothing. It counts.'
+        : 'Naps average ' + lenStr + ' \u2014 enough for a proper break, not just a quick sit-down between chores.';
+    } else if (goal.id === 'work') {
+      if (isContactLikely) {
+        tip = 'Phone work fits best here \u2014 emails, replies, planning. Save laptop work for a free-hands nap.';
+      } else {
+        var sprints = Math.max(1, Math.floor(avgDur / 30));
+        tip = shortNaps
+          ? lenStr + ' average \u2014 one small task: clear the inbox or send that one email.'
+          : 'Roughly ' + sprints + ' focused 25-minute sprint' + (sprints>1?'s':'') + ' at ' + lenStr + ' average. Have the laptop open before the nap starts.';
+      }
+    } else if (goal.id === 'study') {
+      tip = isContactLikely
+        ? 'Audio lectures, reading or flashcards all work one-handed. Save note-heavy study for free hands.'
+        : (shortNaps
+          ? lenStr + ' average \u2014 flashcards or a podcast episode, not deep reading.'
+          : 'One solid focused session at ' + lenStr + ' average. Queue your materials in advance so setup doesn\'t eat the window.');
+    } else if (goal.id === 'fitness') {
+      tip = shortNaps
+        ? lenStr + ' average \u2014 perfect for a quick HIIT round or stretching. No long warm-up needed.'
+        : lenStr + ' average gives you warm-up and a full workout. Get changed before the nap if you can.';
+    } else if (goal.id === 'creative') {
+      tip = isContactLikely
+        ? 'Use it for the thinking half \u2014 capture ideas, plan, browse references. Save the making for free hands.'
+        : (shortNaps
+          ? lenStr + ' average \u2014 sketch, jot ideas, capture one thought well. Flow can wait for a longer window.'
+          : lenStr + ' is enough to get into flow. Leave your materials out so you can dive straight in.');
+    }
+
     h += '<div class="prediction-card">';
     h += '<div class="prediction-eyebrow">\uD83D\uDCA1 Based on ' + dayCount + ' days \u00b7 ' + confidence + '</div>';
     h += '<div class="prediction-body">Your best window for <strong>' + goal.label + '</strong> tomorrow is likely around <strong>' + peakHourFmt + '</strong> during ' + likelyLabel + '.</div>';
+    h += '<div style="font-size:13px;color:var(--muted);line-height:1.6;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07)">' + tip + '</div>';
     h += '</div>';
   }
 
@@ -1329,9 +1366,17 @@ function renderPatterns() {
 
     if (contactPct >= 40 && goal.id !== 'fitness') {
       var babyNm=(state.babyProfile&&state.babyProfile.name)?state.babyProfile.name+'\'s':'';
+      var pctStr = Math.round(contactPct)+'% of '+babyNm+' naps are contact naps. ';
+      var goalGapMap = {
+        rest: { name:'Resting while holding', detail: pctStr+'And for this goal that\'s perfect \u2014 baby on you, podcast on or eyes closed. It absolutely counts as rest.' },
+        work: { name:'Admin & emails one-handed', detail: pctStr+'Use them for the shallow work: emails, replies, invoices from your phone. Protect Cot / Pram naps for the deep work.' },
+        study: { name:'Listen & read one-handed', detail: pctStr+'Ideal for audio lectures, reading or flashcards. Save note-taking and practice questions for free hands.' },
+        creative: { name:'Think now, make later', detail: pctStr+'Use them for the thinking half \u2014 collect ideas, plan projects, browse references. The making happens at Cot / Pram naps.' }
+      };
+      var gg = goalGapMap[goal.id] || { name: goal.label+' one-handed', detail: pctStr+'Great for phone-based tasks \u2014 you\'re holding the baby but your mind is free.' };
       gaps.push({
-        icon: goal.icon, name: goal.label+' one-handed',
-        detail: Math.round(contactPct)+'% of '+babyNm+' naps are contact naps. Great for phone-based '+goal.label.toLowerCase()+' tasks — you\'re holding the baby but your mind is free.',
+        icon: goal.icon, name: gg.name,
+        detail: gg.detail,
         badgeCls:'gap-badge-rest', cardCls:'gap-card-rest', badge:goal.icon+' GOAL'
       });
     } else if (contactPct >= 40 && goal.id === 'fitness') {
