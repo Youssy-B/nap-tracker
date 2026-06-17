@@ -864,6 +864,13 @@ function renderToday() {
   var goalSet=state.parentGoal&&state.parentGoal!=='rest'||state.sleepVibe!=='chaos';
   var babyName=(state.babyProfile&&state.babyProfile.name)?state.babyProfile.name:'your baby';
 
+  // ── Gap detection — has it been a while since last logged nap? ──
+  var lastLoggedDate = allDays.length > 0 ? allDays.sort().slice(-1)[0] : null;
+  var daysSinceLastLog = lastLoggedDate
+    ? Math.floor((new Date(todayKey()+'T12:00:00') - new Date(lastLoggedDate+'T12:00:00')) / 86400000)
+    : 0;
+  var isStale = everLoggedNap && !ongoing && daysSinceLastLog >= 3;
+
   document.getElementById('app-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
   var h='';
 
@@ -980,12 +987,24 @@ function renderToday() {
   // ── Idle ──────────────────────────────────────────────────────
   } else {
 
-    // Wake window — only when meaningful (20+ mins)
+    // Re-entry card — shown instead of stale stats after a gap
+    if (isStale) {
+      var gapMsg = daysSinceLastLog >= 14
+        ? 'It\'s been a couple of weeks \\u2014 no pressure at all. Pick up whenever you\'re ready.'
+        : 'Haven\'t seen you in a few days \\u2014 everything okay? Pick up whenever you\'re ready.';
+      h+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;text-align:center">'
+        +'<div style="font-size:22px;margin-bottom:8px">\\uD83D\\uDC4B</div>'
+        +'<div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">Welcome back</div>'
+        +'<div style="font-size:13px;color:var(--muted);line-height:1.6">'+gapMsg+'</div>'
+        +'</div>';
+    }
+
+    // Wake window — only when meaningful (20+ mins), and not stale
     var ww=getWakeWindowMins();
-    if (everLoggedNap&&avgWW>0&&ww!==null&&ww>=20) {
+    if (!isStale&&everLoggedNap&&avgWW>0&&ww!==null&&ww>=20) {
       var pct=ww/avgWW;
       var wcls=pct>=0.9?'wake-red':pct>=0.7?'wake-amber':'wake-ok';
-      var whint=pct>=0.9?'\u26a0\ufe0f Nap likely very soon':pct>=0.7?'\uD83D\uDD14 Window closing':'Awake since last nap';
+      var whint=pct>=0.9?'\\u26a0\\ufe0f Nap likely very soon':pct>=0.7?'\\uD83D\\uDD14 Window closing':'Awake since last nap';
       h+='<div class="wake-card '+wcls+'">'
         +'<div class="wake-left"><div class="wake-eyebrow">Awake</div>'
         +'<div class="wake-time">'+fmtDur(ww)+'</div>'
