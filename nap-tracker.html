@@ -990,10 +990,10 @@ function renderToday() {
     // Re-entry card — shown instead of stale stats after a gap
     if (isStale) {
       var gapMsg = daysSinceLastLog >= 14
-        ? 'It\'s been a couple of weeks \\u2014 no pressure at all. Pick up whenever you\'re ready.'
-        : 'Haven\'t seen you in a few days \\u2014 everything okay? Pick up whenever you\'re ready.';
+        ? 'It\'s been a couple of weeks \u2014 no pressure at all. Pick up whenever you\'re ready.'
+        : 'Haven\'t seen you in a few days \u2014 everything okay? Pick up whenever you\'re ready.';
       h+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;text-align:center">'
-        +'<div style="font-size:22px;margin-bottom:8px">\\uD83D\\uDC4B</div>'
+        +'<div style="font-size:22px;margin-bottom:8px">\uD83D\uDC4B</div>'
         +'<div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">Welcome back</div>'
         +'<div style="font-size:13px;color:var(--muted);line-height:1.6">'+gapMsg+'</div>'
         +'</div>';
