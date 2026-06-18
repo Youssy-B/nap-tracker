@@ -353,63 +353,63 @@ var ROTATING_CHORES = ['Laundry on','Hoover & sweep','Bathrooms','Laundry fold &
 var DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 var PARENT_GOALS = [
-  { id:'rest',     icon:'☕', label:'Pure Rest & Self-Care',
+  { id:'rest',     icon:'\u2615', label:'Pure Rest & Self-Care',
     contactTasks: ['Rest / nap','Podcast','Mindfulness','Read something just for you'],
-    freeTasks:    ['☕ Hot drink & sit down','🛋️ Total rest','🎧 Headphones on'],
+    freeTasks:    ['\u2615 Hot drink & sit down','\uD83D\uDECB️ Total rest','\uD83C\uDFA7 Headphones on'],
     windowLabel:  'Your rest window',
     insight:      'Protecting your rest is the goal. Even 20 mins horizontal counts.' },
-  { id:'work',     icon:'💻', label:'Remote Work / Side Hustle',
+  { id:'work',     icon:'\uD83D\uDCBB', label:'Remote Work / Side Hustle',
     contactTasks: ['Reply to messages','LinkedIn','Job applications'],
-    freeTasks:    ['💻 Deep work block','📧 Clear inbox','📋 Plan next steps'],
+    freeTasks:    ['\uD83D\uDCBB Deep work block','\uD83D\uDCE7 Clear inbox','\uD83D\uDCCB Plan next steps'],
     windowLabel:  'Work window open',
     insight:      'This is your uninterrupted focus block. Silence notifications and go.' },
-  { id:'study',    icon:'📚', label:'Studying & Learning',
+  { id:'study',    icon:'\uD83D\uDCDA', label:'Studying & Learning',
     contactTasks: ['Online course','Reading','Research / notes'],
-    freeTasks:    ['📚 Study session','✍️ Take notes','🧠 Practice problems'],
+    freeTasks:    ['\uD83D\uDCDA Study session','\u270D️ Take notes','\uD83E\uDDE0 Practice problems'],
     windowLabel:  'Study window open',
     insight:      'Even a 25-min Pomodoro moves the needle. Start before you feel ready.' },
-  { id:'fitness',  icon:'💪', label:'Workout / Physical Health',
+  { id:'fitness',  icon:'\uD83D\uDCAA', label:'Workout / Physical Health',
     contactTasks: ['Mindfulness','Rest / nap'],
-    freeTasks:    ['💪 Quick workout','🧘 Stretch / yoga','🚶 Walk if possible'],
+    freeTasks:    ['\uD83D\uDCAA Quick workout','\uD83E\uDDD8 Stretch / yoga','\uD83D\uDEB6 Walk if possible'],
     windowLabel:  'Movement window',
     insight:      'A 20-min workout beats a 0-min perfect plan. Get moving.' },
-  { id:'creative', icon:'🎨', label:'Hobbies & Creative Time',
+  { id:'creative', icon:'\uD83C\uDFA8', label:'Hobbies & Creative Time',
     contactTasks: ['Journal','Creative project','Podcast'],
-    freeTasks:    ['🎨 Creative time','✍️ Journal','🎵 Something you enjoy'],
+    freeTasks:    ['\uD83C\uDFA8 Creative time','\u270D️ Journal','\uD83C\uDFB5 Something you enjoy'],
     windowLabel:  'Creative window',
     insight:      'This is yours. No guilt — creative recharge makes you a better parent.' }
 ];
 
 var SLEEP_VIBES = [
-  { id:'predictable', label:'Predictable (Steady schedule)',  icon:'🟢',
+  { id:'predictable', label:'Predictable (Steady schedule)',  icon:'\uD83D\uDFE2',
     wakeWindowMod: 1.0,  // use normal avg
     insight: 'Naps are steady — you can plan around them with confidence.' },
-  { id:'chaos',       label:'Complete Chaos (Unpredictable)', icon:'🟡',
+  { id:'chaos',       label:'Complete Chaos (Unpredictable)', icon:'\uD83D\uDFE1',
     wakeWindowMod: 0.85, // tighter buffer
     insight: 'Naps are all over the place — keep tasks short and stay ready to pivot.' },
-  { id:'regression',  label:'Sleep Regression / Teething',    icon:'🔴',
+  { id:'regression',  label:'Sleep Regression / Teething',    icon:'\uD83D\uDD34',
     wakeWindowMod: 0.7,  // much tighter
     insight: 'This is a hard phase. Chores can wait. Survival Mode is there when you need it.' }
 ];
 
 // Chore database with noise + energy scoring (noise: 0=silent,1=low,2=high; energy: 0=low,1=med,2=high)
 var FREE_CHORES_DB = {
-  'Laundry on':           { noise:0, energy:0, wearing:true,  icon:'🫧' },
-  'Laundry fold & put away': { noise:0, energy:0, wearing:true, icon:'👕' },
-  'Hoover & sweep':       { noise:2, energy:1, wearing:false, icon:'🧹' },
-  'Bathrooms':            { noise:0, energy:1, wearing:false, icon:'🚿' },
-  'Wipe down counters':   { noise:0, energy:0, wearing:true,  icon:'🧽' },
-  'Load dishwasher':      { noise:0, energy:0, wearing:true,  icon:'🍽️' },
-  'Prep dinner':          { noise:0, energy:1, wearing:false, icon:'🥘' },
-  'Reply to emails':      { noise:0, energy:0, wearing:true,  icon:'📧' },
-  'Sort mail':            { noise:0, energy:0, wearing:true,  icon:'📬' },
-  'Mop floors':           { noise:0, energy:1, wearing:false, icon:'🧴' },
-  'Take a shower':        { noise:0, energy:0, wearing:false, icon:'🚿' },
-  'Empty household bins': { noise:0, energy:0, wearing:false, icon:'🗑️' },
-  'Put bins out':         { noise:0, energy:0, wearing:false, icon:'♻️' },
-  'Food shopping':        { noise:0, energy:1, wearing:false, icon:'🛒' },
-  'Write shopping list':  { noise:0, energy:0, wearing:true,  icon:'📝' },
-  'Free tidy / catch-up': { noise:0, energy:0, wearing:true,  icon:'✨' }
+  'Laundry on':           { noise:0, energy:0, wearing:true,  icon:'\uD83E\uDEE7' },
+  'Laundry fold & put away': { noise:0, energy:0, wearing:true, icon:'\uD83D\uDC55' },
+  'Hoover & sweep':       { noise:2, energy:1, wearing:false, icon:'\uD83E\uDDF9' },
+  'Bathrooms':            { noise:0, energy:1, wearing:false, icon:'\uD83D\uDEBF' },
+  'Wipe down counters':   { noise:0, energy:0, wearing:true,  icon:'\uD83E\uDDFD' },
+  'Load dishwasher':      { noise:0, energy:0, wearing:true,  icon:'\uD83C\uDF7D️' },
+  'Prep dinner':          { noise:0, energy:1, wearing:false, icon:'\uD83E\uDD58' },
+  'Reply to emails':      { noise:0, energy:0, wearing:true,  icon:'\uD83D\uDCE7' },
+  'Sort mail':            { noise:0, energy:0, wearing:true,  icon:'\uD83D\uDCEC' },
+  'Mop floors':           { noise:0, energy:1, wearing:false, icon:'\uD83E\uDDF4' },
+  'Take a shower':        { noise:0, energy:0, wearing:false, icon:'\uD83D\uDEBF' },
+  'Empty household bins': { noise:0, energy:0, wearing:false, icon:'\uD83D\uDDD1️' },
+  'Put bins out':         { noise:0, energy:0, wearing:false, icon:'\u267B️' },
+  'Food shopping':        { noise:0, energy:1, wearing:false, icon:'\uD83D\uDED2' },
+  'Write shopping list':  { noise:0, energy:0, wearing:true,  icon:'\uD83D\uDCDD' },
+  'Free tidy / catch-up': { noise:0, energy:0, wearing:true,  icon:'\u2728' }
 };
 
 function getNightMessages(name, pronoun) {
@@ -673,7 +673,7 @@ function toggleSurvivalMode() {
   } else {
     state.survivalMode = true;
     state.survivalUntil = new Date().getTime() + 48*60*60*1000;
-    saveState(); toast('🆘 Survival Mode — 48hrs, no chores'); render();
+    saveState(); toast('\uD83C\uDD98 Survival Mode — 48hrs, no chores'); render();
   }
 }
 
@@ -692,11 +692,11 @@ function getChoreMeta(choreName) {
     var k = parts[i].trim();
     if (FREE_CHORES_DB[k]) return FREE_CHORES_DB[k];
   }
-  return { noise:0, energy:0, wearing:true, icon:'✨' };
+  return { noise:0, energy:0, wearing:true, icon:'\u2728' };
 }
 
-function noiseLabel(n) { return ['🔇 Silent','🔉 Low noise','🔊 Loud'][n]||''; }
-function energyLabel(e) { return ['💤 Low energy','⚡ Medium','🔥 High energy'][e]||''; }
+function noiseLabel(n) { return ['\uD83D\uDD07 Silent','\uD83D\uDD09 Low noise','\uD83D\uDD0A Loud'][n]||''; }
+function energyLabel(e) { return ['\uD83D\uDCA4 Low energy','\u26A1 Medium','\uD83D\uDD25 High energy'][e]||''; }
 function noiseBadgeClass(n) { return ['badge-noise-low','badge-noise-low','badge-noise-high'][n]||'badge-noise-low'; }
 function energyBadgeClass(e) { return ['badge-energy-low','badge-energy-med','badge-energy-high'][e]||'badge-energy-low'; }
 
@@ -704,8 +704,8 @@ function getChoreBadgeHtml(choreName) {
   var m = getChoreMeta(choreName);
   if (!m) return '';
   var wearing = m.wearing
-    ? '<span class="chore-badge badge-noise-low">🤱 Wearing OK</span>'
-    : '<span class="chore-badge badge-energy-low">🚫 No wearing</span>';
+    ? '<span class="chore-badge badge-noise-low">\uD83E\uDD31 Wearing OK</span>'
+    : '<span class="chore-badge badge-energy-low">\uD83D\uDEAB No wearing</span>';
   return '<div class="chore-badges">'
     + '<span class="chore-badge '+noiseBadgeClass(m.noise)+'">'+noiseLabel(m.noise)+'</span>'
     + '<span class="chore-badge '+energyBadgeClass(m.energy)+'">'+energyLabel(m.energy)+'</span>'
@@ -782,7 +782,7 @@ function renderWelcome() {
   var name = state.babyProfile.name || '';
   var gender = state.babyProfile.gender || '';
   el.innerHTML =
-    '<div class="welcome-logo">✨ Nap Tracker</div>'
+    '<div class="welcome-logo">\u2728 Nap Tracker</div>'
    +'<div class="welcome-title">Your nap window,<br>made useful.</div>'
    +'<div class="welcome-sub">Tells you the one best thing to do while your baby sleeps.</div>'
    +'<div class="welcome-field-label">Baby\'s name</div>'
@@ -804,7 +804,7 @@ function renderWelcome() {
    +'</div>'
    +'</div>'
    +'<div style="background:#1a1410;border:1px solid #3a2a10;border-radius:12px;padding:10px 14px;margin-bottom:20px;font-size:12px;color:#c9a060;line-height:1.5">'
-   +'⚠️ Your data is saved on this device only. Add to your home screen for the best experience and to keep your data safe.</div>'
+   +'\u26A0️ Your data is saved on this device only. Add to your home screen for the best experience and to keep your data safe.</div>'
    +'<button class="welcome-btn" onclick="completeWelcome()">Let\'s go →</button>';
 }
 
@@ -970,7 +970,7 @@ function renderToday() {
         +'</div>'
         +'<div id="wearing-tooltip" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;font-size:13px;color:var(--muted);line-height:1.6"></div>';
       h+='<button class="window-toggle" onclick="toggleWindowRoutes()">'
-        +'<span class="window-toggle-label">'+(windowRoutesOpen?'Hide suggestions':(goalSet?'What can I do now?':'💡 Set a goal to get suggestions'))+'</span>'
+        +'<span class="window-toggle-label">'+(windowRoutesOpen?'Hide suggestions':(goalSet?'What can I do now?':'\uD83D\uDCA1 Set a goal to get suggestions'))+'</span>'
         +'<span class="window-toggle-chevron">'+(windowRoutesOpen?'\u25b2':'\u25bc')+'</span>'
         +'</button>';
       if (windowRoutesOpen) {
@@ -1004,7 +1004,7 @@ function renderToday() {
     if (!isStale&&everLoggedNap&&avgWW>0&&ww!==null&&ww>=20) {
       var pct=ww/avgWW;
       var wcls=pct>=0.9?'wake-red':pct>=0.7?'wake-amber':'wake-ok';
-      var whint=pct>=0.9?'\\u26a0\\ufe0f Nap likely very soon':pct>=0.7?'\\uD83D\\uDD14 Window closing':'Awake since last nap';
+      var whint=pct>=0.9?'\u26a0\ufe0f Nap likely very soon':pct>=0.7?'\uD83D\uDD14 Window closing':'Awake since last nap';
       h+='<div class="wake-card '+wcls+'">'
         +'<div class="wake-left"><div class="wake-eyebrow">Awake</div>'
         +'<div class="wake-time">'+fmtDur(ww)+'</div>'
@@ -1095,7 +1095,7 @@ function renderToday() {
     if (allDaysHome >= 2 && allDaysHome < 7) {
       var daysToPatterns = 7 - allDaysHome;
       h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-top:10px;display:flex;align-items:center;gap:10px">'
-        + '<div style="flex:1"><div style="font-size:12px;color:var(--muted);line-height:1.5">📈 <strong style="color:var(--text)">' + daysToPatterns + ' more day' + (daysToPatterns===1?'':'s') + '</strong> until your personalised prediction unlocks</div></div>'
+        + '<div style="flex:1"><div style="font-size:12px;color:var(--muted);line-height:1.5">\uD83D\uDCC8 <strong style="color:var(--text)">' + daysToPatterns + ' more day' + (daysToPatterns===1?'':'s') + '</strong> until your personalised prediction unlocks</div></div>'
         + '<div style="background:var(--border);border-radius:4px;height:4px;width:60px;flex-shrink:0"><div style="background:var(--teal);height:4px;border-radius:4px;width:' + Math.round(allDaysHome/7*100) + '%"></div></div>'
         + '</div>';
     }
@@ -1151,7 +1151,7 @@ function renderPatterns() {
 
   if (dayCount < 2) {
     el.innerHTML = '<div class="empty">'
-      + '<div style="font-size:28px;margin-bottom:12px">📈</div>'
+      + '<div style="font-size:28px;margin-bottom:12px">\uD83D\uDCC8</div>'
       + '<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Patterns unlock as you log</div>'
       + '<div style="font-size:13px;color:var(--muted);line-height:1.7;max-width:260px;margin:0 auto">'
       + 'After a few days you\'ll see:<br>'
@@ -1185,7 +1185,7 @@ function renderPatterns() {
       if (olderAvg - recentAvg >= 0.8) {
         var babyN = (state.babyProfile&&state.babyProfile.name)?state.babyProfile.name:'your baby';
         h += '<div style="background:linear-gradient(135deg,#1a2a1a,#141e14);border:1px solid var(--teal);border-radius:14px;padding:14px 16px;margin-bottom:12px">'
-          + '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">🌱 ' + babyN + '\'s schedule is shifting</div>'
+          + '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">\uD83C\uDF31 ' + babyN + '\'s schedule is shifting</div>'
           + '<div style="font-size:13px;color:var(--muted);line-height:1.5">'
           + babyN + ' is averaging <strong style="color:var(--text)">' + recentAvg.toFixed(1) + ' naps/day</strong> this week, down from ' + olderAvg.toFixed(1) + '. '
           + 'Windows are getting longer — worth updating your goal in Profile.'
@@ -1203,7 +1203,7 @@ function renderPatterns() {
     if (daysSinceStart >= 28) {
       h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'
         + '<div style="flex:1">'
-        + '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">🎯 Still the right goal?</div>'
+        + '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">\uD83C\uDFAF Still the right goal?</div>'
         + '<div style="font-size:13px;color:var(--muted);line-height:1.5">It\'s been a month. Is <strong style="color:var(--accent)">' + goal.label + '</strong> still what you want to protect?</div>'
         + '<button onclick="switchTab(\'settings\',document.querySelectorAll(\'.tab\')[3])" style="margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-weight:600;padding:6px 12px;cursor:pointer;font-family:\'Inter\',sans-serif">Review my goal</button>'
         + '</div>'
@@ -1216,7 +1216,7 @@ function renderPatterns() {
   if (!showPrediction) {
     var daysLeft = 7 - dayCount;
     h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px">'
-      + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">📈 Building your picture</div>'
+      + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">\uD83D\uDCC8 Building your picture</div>'
       + '<div style="font-size:13px;color:var(--muted);line-height:1.5">Log <strong style="color:var(--text)">' + daysLeft + ' more day' + (daysLeft===1?'':'s') + '</strong> and we\'ll predict your best window for <strong style="color:var(--accent)">' + goal.label + '</strong> tomorrow.</div>'
       + '<div style="margin-top:10px;background:var(--border);border-radius:4px;height:4px">'
       + '<div style="background:var(--teal);height:4px;border-radius:4px;width:' + Math.round(dayCount/7*100) + '%"></div>'
@@ -1226,7 +1226,7 @@ function renderPatterns() {
   } else if (!showWeeklySummary) {
     var daysLeft2 = 14 - dayCount;
     h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px">'
-      + '<div style="flex:1;font-size:12px;color:var(--muted);line-height:1.4">📊 <strong style="color:var(--text)">' + daysLeft2 + ' more day' + (daysLeft2===1?'':'s') + '</strong> until your weekly summary unlocks</div>'
+      + '<div style="flex:1;font-size:12px;color:var(--muted);line-height:1.4">\uD83D\uDCCA <strong style="color:var(--text)">' + daysLeft2 + ' more day' + (daysLeft2===1?'':'s') + '</strong> until your weekly summary unlocks</div>'
       + '<div style="background:var(--border);border-radius:4px;height:4px;width:60px;flex-shrink:0"><div style="background:var(--teal);height:4px;border-radius:4px;width:' + Math.round(dayCount/14*100) + '%"></div></div>'
       + '</div>';
   }
@@ -1312,7 +1312,7 @@ function renderPatterns() {
 
     h += '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
-      + '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent)">📊 This week</span>'
+      + '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent)">\uD83D\uDCCA This week</span>'
       + (longestDayLabel ? '<span style="font-size:11px;color:var(--muted)">Best: <strong style="color:var(--text)">'+longestDayLabel+'</strong></span>' : '')
       + '</div>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
